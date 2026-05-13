@@ -1,62 +1,81 @@
 project:
   name: "Dmytro Rukin / LaFinteca SERM"
-  database_path: "data/mentions.db"
+  database_path: "data/serp_history.sqlite3"
   screenshots_dir: "data/screenshots"
   entity_map_path: "data/entity_map.json"
-serp:
+
+monitoring:
   provider: "dataforseo"
-  country: "BR"
-  language: "pt"
+  location_code: 2076
   location_name: "Brazil"
+  language_code: "pt"
   device: "desktop"
+  os: "windows"
   depth: 10
+  queries:
+    - "\"Dmytro Rukin\""
+    - "\"Dmitry Rukin\""
+    - "\"dmytro rukin\""
+    - "\"dmitry rukin\""
+    - "\"LaFinteca\""
+    - "\"lafinteca\""
+    - "\"Dmytro Rukin\" OR \"LaFinteca\""
+    - "\"Dmitry Rukin\" OR \"LaFinteca\""
+    - "\"dmytro rukin\" fintech"
+    - "\"dmitry rukin\" fintech"
+    - "\"LaFinteca\" fintech"
+    - "\"lafinteca\" fintech"
+    - "\"Dmytro Rukin\" pagamentos"
+    - "\"Dmytro Rukin\" fraude"
+    - "\"Dmytro Rukin\" investimento"
+    - "\"LaFinteca\" pagamentos"
+    - "\"LaFinteca\" banco"
+    - "\"LaFinteca\" fraude"
+    - "\"Rukin\" fintech"
+    - "\"Rukin\" Brazil"
+    - "site:linkedin.com/in \"Dmytro Rukin\""
+    - "site:medium.com \"Dmytro Rukin\""
+    - "site:crunchbase.com \"LaFinteca\""
 
-queries:
-  - "\"Dmytro Rukin\""
-  - "\"Dmitry Rukin\""
-  - "\"dmytro rukin\""
-  - "\"dmitry rukin\""
-  - "\"LaFinteca\""
-  - "\"lafinteca\""
-  - "\"Dmytro Rukin\" OR \"LaFinteca\""
-  - "\"Dmitry Rukin\" OR \"LaFinteca\""
-  - "\"dmytro rukin\" fintech"
-  - "\"dmitry rukin\" fintech"
-  - "\"LaFinteca\" fintech"
-  - "\"lafinteca\" fintech"
-  - "\"Dmytro Rukin\" pagamentos"
-  - "\"Dmytro Rukin\" fraude"
-  - "\"Dmytro Rukin\" investimento"
-  - "\"LaFinteca\" pagamentos"
-  - "\"LaFinteca\" banco"
-  - "\"LaFinteca\" fraude"
-  - "\"Rukin\" fintech"
-  - "\"Rukin\" Brazil"
-  - "site:linkedin.com/in \"Dmytro Rukin\""
-  - "site:medium.com \"Dmytro Rukin\""
-  - "site:crunchbase.com \"LaFinteca\""
+sentiment:
+  use_openai: true
+  openai_model: "${OPENAI_MODEL:-gpt-4o-mini}"
+  negative_keywords_pt:
+    - "fraude"
+    - "golpe"
+    - "scam"
+    - "investigação"
+    - "processo"
+    - "crime"
+    - "acusação"
+    - "reclamação"
+    - "lavagem"
+    - "irregularidade"
+    - "suspeita"
+    - "pirâmide"
+    - "denúncia"
+    - "risco"
+    - "bloqueio"
+    - "financeiro"
+    - "fraude financeira"
+    - "problema"
+    - "ilegal"
+    - "denúncia financeira"
+    - "reclame aqui"
 
-negative_keywords:
-  - "fraude"
-  - "golpe"
-  - "scam"
-  - "investigação"
-  - "processo"
-  - "crime"
-  - "acusação"
-  - "reclamação"
-  - "lavagem"
-  - "irregularidade"
-  - "suspeita"
-  - "pirâmide"
-  - "denúncia"
-  - "risco"
-  - "bloqueio"
-  - "financeiro"
-  - "fraude financeira"
-  - "problema"
-  - "ilegal"
-  - "denúncia financeira"
+screenshots:
+  enabled: true
+  max_per_run: 10
+  timeout_ms: 30000
+  full_page: true
 
 telegram:
+  enabled: true
+  alert_on_sentiments:
+    - "negative"
+    - "risky"
+  max_message_mentions: 20
+  send_screenshots: true
+
+entity_map:
   enabled: true
