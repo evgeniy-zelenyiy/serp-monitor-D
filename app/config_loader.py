@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,65 @@ import yaml
 from dotenv import load_dotenv
 
 _ENV_PATTERN = re.compile(r"\$\{([^}:]+)(?::-([^}]*))?\}")
+
+DEFAULT_NEGATIVE_KEYWORDS_PT = [
+    "fraude",
+    "golpe",
+    "scam",
+    "investigação",
+    "processo",
+    "crime",
+    "acusação",
+    "reclamação",
+    "lavagem",
+    "irregularidade",
+    "suspeita",
+    "pirâmide",
+    "denúncia",
+    "risco",
+    "bloqueio",
+    "fraude financeira",
+    "problema",
+    "ilegal",
+    "denúncia financeira",
+    "reclame aqui",
+]
+
+DEFAULT_CONFIG: dict[str, Any] = {
+    "project": {
+        "database_path": "data/serp_history.sqlite3",
+        "screenshots_dir": "data/screenshots",
+        "entity_map_path": "data/entity_map.json",
+    },
+    "monitoring": {
+        "queries": [],
+        "location_code": 2076,
+        "language_code": "pt",
+        "device": "desktop",
+        "os": "windows",
+        "depth": 20,
+    },
+    "sentiment": {
+        "use_openai": True,
+        "openai_model": "${OPENAI_MODEL:-gpt-4o-mini}",
+        "negative_keywords_pt": DEFAULT_NEGATIVE_KEYWORDS_PT,
+    },
+    "screenshots": {
+        "enabled": True,
+        "max_per_run": 10,
+        "timeout_ms": 30000,
+        "full_page": True,
+    },
+    "telegram": {
+        "enabled": True,
+        "alert_on_sentiments": ["negative", "risky"],
+        "max_message_mentions": 20,
+        "send_screenshots": True,
+    },
+    "entity_map": {
+        "enabled": True,
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -48,11 +108,52 @@ def _expand_env(value: Any) -> Any:
     return value
 
 
+def _deep_merge(defaults: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
+    merged = deepcopy(defaults)
+    for key, value in overrides.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _normalize_legacy_config(config: dict[str, Any]) -> dict[str, Any]:
+    """Accept older config.yaml shapes while exposing the runtime schema."""
+    normalized = deepcopy(config)
+
+    monitoring = dict(normalized.get("monitoring") or {})
+    serp = normalized.get("serp") or {}
+
+    if "queries" not in monitoring and "queries" in normalized:
+        monitoring["queries"] = normalized["queries"]
+    if "location_code" not in monitoring and serp.get("location_code"):
+        monitoring["location_code"] = serp["location_code"]
+    if "language_code" not in monitoring:
+        monitoring["language_code"] = serp.get("language_code") or serp.get("language") or "pt"
+    if "device" not in monitoring and serp.get("device"):
+        monitoring["device"] = serp["device"]
+    if "depth" not in monitoring and serp.get("depth"):
+        monitoring["depth"] = serp["depth"]
+
+    normalized["monitoring"] = monitoring
+
+    sentiment = dict(normalized.get("sentiment") or {})
+    if "negative_keywords_pt" not in sentiment and "negative_keywords" in normalized:
+        sentiment["negative_keywords_pt"] = normalized["negative_keywords"]
+    normalized["sentiment"] = sentiment
+
+    return normalized
+
+
 def load_settings(config_path: str | Path = "config.yaml") -> Settings:
     """Load YAML config and secrets from the environment."""
     load_dotenv()
     with Path(config_path).open("r", encoding="utf-8") as handle:
-        config = _expand_env(yaml.safe_load(handle))
+        loaded = yaml.safe_load(handle) or {}
+
+    normalized = _normalize_legacy_config(loaded)
+    config = _expand_env(_deep_merge(DEFAULT_CONFIG, normalized))
 
     return Settings(
         raw=config,
