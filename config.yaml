@@ -1,53 +1,84 @@
 project:
-  name: "Example Brand SERP Monitor"
-  database_path: "data/serp_history.sqlite3"
-  screenshots_dir: "data/screenshots"
-  entity_map_path: "data/entity_map.json"
+name: "Dmytro Rukin / LaFinteca SERM"
 
-monitoring:
-  # Queries to monitor. Add brand, executives, products, common misspellings, and high-risk phrases.
-  queries:
-    - "Example Brand"
-    - "Example Brand reviews"
-    - "Example Brand reclamação"
-  location_code: 2076 # Brazil
-  language_code: "pt"
-  device: "desktop"
-  os: "windows"
-  depth: 20
-  search_engine: "google"
+serp:
+provider: "dataforseo"
+country: "BR"
+language: "pt"
+location_name: "Brazil"
+device: "desktop"
+depth: 10
 
-sentiment:
-  use_openai: true
-  openai_model: "${OPENAI_MODEL:-gpt-4o-mini}"
-  negative_keywords_pt:
-    - "acusação"
-    - "boicote"
-    - "cancelado"
-    - "crime"
-    - "denúncia"
-    - "fraude"
-    - "golpe"
-    - "ilegal"
-    - "investigação"
-    - "mentira"
-    - "processo"
-    - "procon"
-    - "reclamação"
-    - "reclame aqui"
-    - "roubo"
-    - "vazamento"
+queries:
 
-screenshots:
-  enabled: true
-  full_page: true
-  timeout_ms: 30000
-  max_per_run: 10
+* '"Dmytro Rukin"'
+
+* '"Dmitry Rukin"'
+
+* '"dmytro rukin"'
+
+* '"dmitry rukin"'
+
+* '"LaFinteca"'
+
+* '"lafinteca"'
+
+* '"Dmytro Rukin" OR "LaFinteca"'
+
+* '"Dmitry Rukin" OR "LaFinteca"'
+
+* '"dmytro rukin" fintech'
+
+* '"dmitry rukin" fintech'
+
+* '"LaFinteca" fintech'
+
+* '"lafinteca" fintech'
+
+* '"Dmytro Rukin" pagamentos'
+
+* '"Dmytro Rukin" fraude'
+
+* '"Dmytro Rukin" investimento'
+
+* '"LaFinteca" pagamentos'
+
+* '"LaFinteca" banco'
+
+* '"LaFinteca" fraude'
+
+* '"Rukin" fintech'
+
+* '"Rukin" Brazil'
+
+* 'site:linkedin.com/in "Dmytro Rukin"'
+
+* 'site:medium.com "Dmytro Rukin"'
+
+* 'site:crunchbase.com "LaFinteca"'
+
+negative_keywords:
+
+* fraude
+* golpe
+* scam
+* investigação
+* processo
+* crime
+* acusação
+* reclamação
+* lavagem
+* irregularidade
+* suspeita
+* pirâmide
+* denúncia
+* risco
+* bloqueio
+* financeiro
+* fraude financeira
+* problema
+* ilegal
+* denúncia financeira
 
 telegram:
-  enabled: true
-  send_screenshots: true
-  alert_on_sentiments:
-    - "negative"
-    - "risky"
-  max_message_mentions: 20
+enabled: true
