@@ -43,7 +43,7 @@ def run(config_path: str) -> None:
         changes = database.save_mentions(run_id, mentions)
         if settings.raw.get("entity_map", {}).get("enabled", True):
             entity_map_builder.build(changes)
-        reporter.send(changes)
+        reporter.send(changes, demo_mode=fetcher.demo_mode)
         logging.info("SERP monitor run complete")
     finally:
         database.close()
