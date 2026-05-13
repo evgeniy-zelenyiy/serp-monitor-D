@@ -50,6 +50,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "device": "desktop",
         "os": "windows",
         "depth": 20,
+        "demo_results_per_query": 3,
     },
     "sentiment": {
         "use_openai": True,
