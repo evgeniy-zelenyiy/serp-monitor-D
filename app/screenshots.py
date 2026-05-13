@@ -24,7 +24,7 @@ class ScreenshotService:
 
     def __init__(self, screenshots_dir: Path, config: dict) -> None:
         self.screenshots_dir = screenshots_dir
-        self.config = config["screenshots"]
+        self.config = config.get("screenshots") or {}
         self.screenshots_dir.mkdir(parents=True, exist_ok=True)
 
     def capture_many(self, run_id: str, mentions: Iterable[Mention]) -> list[Mention]:
