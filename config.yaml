@@ -12,6 +12,7 @@ monitoring:
   device: "desktop"
   os: "windows"
   depth: 10
+  demo_results_per_query: 3
   queries:
     - "\"Dmytro Rukin\""
     - "\"Dmitry Rukin\""
