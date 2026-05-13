@@ -24,10 +24,8 @@ class TelegramReporter:
 
     def send(self, changes: Iterable[MentionChange], demo_mode: bool = False) -> None:
         changes = list(changes)
-        if not self.config.get("enabled", True) or not self.token or not self.chat_id:
-            LOGGER.info("Telegram reporting skipped because it is disabled or credentials are missing")
-            if demo_mode:
-                LOGGER.info("DEMO MODE - no live Google data")
+        if not self.config.get("enabled", True):
+            LOGGER.info("Telegram reporting skipped because it is disabled")
             return
 
         alert_sentiments = set(self.config.get("alert_on_sentiments", ["negative", "risky"]))
@@ -41,6 +39,14 @@ class TelegramReporter:
             return
 
         text = self._format_message(notable[: int(self.config.get("max_message_mentions", 20))], demo_mode=demo_mode)
+        LOGGER.info("Prepared Telegram report with %d notable mentions", len(notable))
+        if demo_mode:
+            LOGGER.info("DEMO MODE - no live Google data")
+
+        if not self.token or not self.chat_id:
+            LOGGER.info("Telegram delivery skipped because credentials are missing")
+            return
+
         with httpx.Client(timeout=30) as client:
             client.post(f"{self.base_url}/sendMessage", data={"chat_id": self.chat_id, "text": text}).raise_for_status()
             if self.config.get("send_screenshots", True):
