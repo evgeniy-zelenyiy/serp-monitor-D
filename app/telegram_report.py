@@ -19,7 +19,7 @@ class TelegramReporter:
     def __init__(self, token: str | None, chat_id: str | None, config: dict) -> None:
         self.token = token
         self.chat_id = chat_id
-        self.config = config["telegram"]
+        self.config = config.get("telegram") or {}
         self.base_url = f"https://api.telegram.org/bot{token}" if token else ""
 
     def send(self, changes: Iterable[MentionChange]) -> None:
