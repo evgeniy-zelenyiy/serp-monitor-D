@@ -21,7 +21,7 @@ class SentimentAnalyzer:
     VALID_LABELS = {"positive", "neutral", "negative", "risky"}
 
     def __init__(self, config: dict, api_key: str | None) -> None:
-        sentiment_config = config["sentiment"]
+        sentiment_config = config.get("sentiment") or {}
         self.use_openai = bool(sentiment_config.get("use_openai", True) and api_key)
         self.model = sentiment_config.get("openai_model", "gpt-4o-mini")
         self.negative_keywords = [word.lower() for word in sentiment_config.get("negative_keywords_pt", [])]
