@@ -26,18 +26,19 @@ class DataForSeoSerpFetcher:
         if not self.login or not self.password:
             raise RuntimeError("DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD are required")
 
+        monitoring = self.config.get("monitoring") or {}
         mentions: list[Mention] = []
-        for query in self.config["monitoring"]["queries"]:
+        for query in monitoring.get("queries", []):
             mentions.extend(self.fetch_query(query))
         return mentions
 
     def fetch_query(self, query: str) -> list[Mention]:
-        monitoring = self.config["monitoring"]
+        monitoring = self.config.get("monitoring") or {}
         payload = [
             {
                 "keyword": query,
-                "location_code": monitoring["location_code"],
-                "language_code": monitoring["language_code"],
+                "location_code": monitoring.get("location_code", 2076),
+                "language_code": monitoring.get("language_code", "pt"),
                 "device": monitoring.get("device", "desktop"),
                 "os": monitoring.get("os", "windows"),
                 "depth": monitoring.get("depth", 20),
