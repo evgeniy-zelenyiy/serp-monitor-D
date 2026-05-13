@@ -1,84 +1,60 @@
 project:
-name: "Dmytro Rukin / LaFinteca SERM"
+  name: "Dmytro Rukin / LaFinteca SERM"
 
 serp:
-provider: "dataforseo"
-country: "BR"
-language: "pt"
-location_name: "Brazil"
-device: "desktop"
-depth: 10
+  provider: "dataforseo"
+  country: "BR"
+  language: "pt"
+  location_name: "Brazil"
+  device: "desktop"
+  depth: 10
 
 queries:
-
-* '"Dmytro Rukin"'
-
-* '"Dmitry Rukin"'
-
-* '"dmytro rukin"'
-
-* '"dmitry rukin"'
-
-* '"LaFinteca"'
-
-* '"lafinteca"'
-
-* '"Dmytro Rukin" OR "LaFinteca"'
-
-* '"Dmitry Rukin" OR "LaFinteca"'
-
-* '"dmytro rukin" fintech'
-
-* '"dmitry rukin" fintech'
-
-* '"LaFinteca" fintech'
-
-* '"lafinteca" fintech'
-
-* '"Dmytro Rukin" pagamentos'
-
-* '"Dmytro Rukin" fraude'
-
-* '"Dmytro Rukin" investimento'
-
-* '"LaFinteca" pagamentos'
-
-* '"LaFinteca" banco'
-
-* '"LaFinteca" fraude'
-
-* '"Rukin" fintech'
-
-* '"Rukin" Brazil'
-
-* 'site:linkedin.com/in "Dmytro Rukin"'
-
-* 'site:medium.com "Dmytro Rukin"'
-
-* 'site:crunchbase.com "LaFinteca"'
+  - "\"Dmytro Rukin\""
+  - "\"Dmitry Rukin\""
+  - "\"dmytro rukin\""
+  - "\"dmitry rukin\""
+  - "\"LaFinteca\""
+  - "\"lafinteca\""
+  - "\"Dmytro Rukin\" OR \"LaFinteca\""
+  - "\"Dmitry Rukin\" OR \"LaFinteca\""
+  - "\"dmytro rukin\" fintech"
+  - "\"dmitry rukin\" fintech"
+  - "\"LaFinteca\" fintech"
+  - "\"lafinteca\" fintech"
+  - "\"Dmytro Rukin\" pagamentos"
+  - "\"Dmytro Rukin\" fraude"
+  - "\"Dmytro Rukin\" investimento"
+  - "\"LaFinteca\" pagamentos"
+  - "\"LaFinteca\" banco"
+  - "\"LaFinteca\" fraude"
+  - "\"Rukin\" fintech"
+  - "\"Rukin\" Brazil"
+  - "site:linkedin.com/in \"Dmytro Rukin\""
+  - "site:medium.com \"Dmytro Rukin\""
+  - "site:crunchbase.com \"LaFinteca\""
 
 negative_keywords:
-
-* fraude
-* golpe
-* scam
-* investigação
-* processo
-* crime
-* acusação
-* reclamação
-* lavagem
-* irregularidade
-* suspeita
-* pirâmide
-* denúncia
-* risco
-* bloqueio
-* financeiro
-* fraude financeira
-* problema
-* ilegal
-* denúncia financeira
+  - "fraude"
+  - "golpe"
+  - "scam"
+  - "investigação"
+  - "processo"
+  - "crime"
+  - "acusação"
+  - "reclamação"
+  - "lavagem"
+  - "irregularidade"
+  - "suspeita"
+  - "pirâmide"
+  - "denúncia"
+  - "risco"
+  - "bloqueio"
+  - "financeiro"
+  - "fraude financeira"
+  - "problema"
+  - "ilegal"
+  - "denúncia financeira"
 
 telegram:
-enabled: true
+  enabled: true
