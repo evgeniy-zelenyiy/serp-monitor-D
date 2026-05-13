@@ -22,10 +22,12 @@ class TelegramReporter:
         self.config = config.get("telegram") or {}
         self.base_url = f"https://api.telegram.org/bot{token}" if token else ""
 
-    def send(self, changes: Iterable[MentionChange]) -> None:
+    def send(self, changes: Iterable[MentionChange], demo_mode: bool = False) -> None:
         changes = list(changes)
         if not self.config.get("enabled", True) or not self.token or not self.chat_id:
             LOGGER.info("Telegram reporting skipped because it is disabled or credentials are missing")
+            if demo_mode:
+                LOGGER.info("DEMO MODE - no live Google data")
             return
 
         alert_sentiments = set(self.config.get("alert_on_sentiments", ["negative", "risky"]))
@@ -38,7 +40,7 @@ class TelegramReporter:
             LOGGER.info("No notable changes for Telegram report")
             return
 
-        text = self._format_message(notable[: int(self.config.get("max_message_mentions", 20))])
+        text = self._format_message(notable[: int(self.config.get("max_message_mentions", 20))], demo_mode=demo_mode)
         with httpx.Client(timeout=30) as client:
             client.post(f"{self.base_url}/sendMessage", data={"chat_id": self.chat_id, "text": text}).raise_for_status()
             if self.config.get("send_screenshots", True):
@@ -53,8 +55,10 @@ class TelegramReporter:
                             ).raise_for_status()
 
     @staticmethod
-    def _format_message(changes: list[MentionChange]) -> str:
+    def _format_message(changes: list[MentionChange], demo_mode: bool = False) -> str:
         lines = ["SERP monitor report"]
+        if demo_mode:
+            lines.append("DEMO MODE - no live Google data")
         for change in changes:
             marker = "NEW" if change.is_new_url else f"rank {change.previous_rank}→{change.mention.rank}"
             lines.append(
