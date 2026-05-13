@@ -41,7 +41,8 @@ def run(config_path: str) -> None:
         mentions = analyzer.analyze_many(mentions)
         mentions = screenshots.capture_many(run_id, mentions)
         changes = database.save_mentions(run_id, mentions)
-        entity_map_builder.build(changes)
+        if settings.raw.get("entity_map", {}).get("enabled", True):
+            entity_map_builder.build(changes)
         reporter.send(changes)
         logging.info("SERP monitor run complete")
     finally:
