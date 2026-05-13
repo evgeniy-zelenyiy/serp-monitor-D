@@ -1,6 +1,8 @@
 project:
   name: "Dmytro Rukin / LaFinteca SERM"
-
+  database_path: "data/mentions.db"
+  screenshots_dir: "data/screenshots"
+  entity_map_path: "data/entity_map.json"
 serp:
   provider: "dataforseo"
   country: "BR"
