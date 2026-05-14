@@ -50,11 +50,11 @@ def run(config_path: str) -> None:
         logging.info("Fetched %d organic SERP results", len(mentions))
         mentions = analyzer.analyze_many(mentions)
         mentions = publisher.enrich_many(mentions)
-        screenshot_paths = screenshots.capture_serp_snapshots(run_datetime, mentions, country, language)
-
-        changes = []
         grouped_mentions = _group_by_query(mentions)
         snapshot_queries = configured_queries or sorted(grouped_mentions)
+        screenshot_paths = screenshots.capture_serp_snapshots(run_datetime, mentions, country, language, snapshot_queries)
+
+        changes = []
         for query in snapshot_queries:
             changes.extend(
                 database.save_serp_snapshot(
