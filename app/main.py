@@ -32,6 +32,7 @@ def run(config_path: str) -> None:
     country = str(monitoring.get("country", "BR"))
     language = str(monitoring.get("language", "pt"))
     device = str(monitoring.get("device", "desktop"))
+    configured_queries = [str(query) for query in monitoring.get("queries", [])]
     logging.info("Starting SERP snapshot run_id=%s", run_id)
 
     database = SerpDatabase(settings.database_path)
@@ -52,7 +53,9 @@ def run(config_path: str) -> None:
         screenshot_paths = screenshots.capture_serp_snapshots(run_datetime, mentions, country, language)
 
         changes = []
-        for query, query_mentions in _group_by_query(mentions).items():
+        grouped_mentions = _group_by_query(mentions)
+        snapshot_queries = configured_queries or sorted(grouped_mentions)
+        for query in snapshot_queries:
             changes.extend(
                 database.save_serp_snapshot(
                     run_id=run_id,
@@ -62,7 +65,7 @@ def run(config_path: str) -> None:
                     language=language,
                     device=device,
                     mode="demo" if fetcher.demo_mode else "live",
-                    mentions=query_mentions,
+                    mentions=grouped_mentions.get(query, []),
                     screenshot_path=screenshot_paths.get(query),
                     track_disappeared=bool(monitoring.get("track_disappeared", True)),
                 )
