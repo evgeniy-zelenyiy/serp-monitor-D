@@ -13,30 +13,23 @@ A clean, scheduled Google SERP monitoring system for reputation management and S
 - Capture local screenshots of result URLs with Playwright.
 - Send Telegram reports and screenshots for risky/negative alerts.
 - Build an entity map JSON linking queries, URLs, domains, ranks, source type, and sentiment.
-- Publish a permanent static dashboard from the `/docs` folder with sortable tables, filters, summary cards, and screenshots.
+- Publish a permanent static dashboard from the `/docs` folder with sortable tables, filters, search, entity/domain summary cards, and screenshots.
 - Run automatically with GitHub Actions every 6 hours.
 
 ## Project structure
 
 ```text
-app/
-  main.py               # CLI orchestration
-  serp_fetcher.py       # Serper.dev Google organic SERP API client + demo fallback
-  sentiment.py          # OpenAI + Portuguese keyword sentiment/risk analysis
-  screenshots.py        # Playwright screenshot capture
-  telegram_report.py    # Telegram reporting
-  entity_map.py         # Entity map JSON graph builder
-  database.py           # SQLite persistence and change detection
-  config_loader.py      # YAML and environment config loading
-  dashboard_exporter.py # Static dashboard JSON and screenshot exporter
+app/                       # Monitor, persistence, sentiment, screenshots, reports
+scripts/export_dashboard_data.py
 docs/
-  index.html            # GitHub Pages dashboard
-  styles.css            # Dashboard styles
-  app.js                # Dashboard filters, sorting, and rendering
-  data/results.json     # Auto-updated dashboard data
-config.yaml             # Monitoring configuration
-requirements.txt        # Python dependencies
-.env.example            # Environment variables
+  index.html               # GitHub Pages dashboard
+  styles.css               # Dark responsive dashboard styles
+  app.js                   # Filters, search, sorting, rendering
+  data/results.json        # Auto-updated dashboard data
+  screenshots/             # Auto-copied dashboard screenshots
+config.yaml
+requirements.txt
+.env.example
 .github/workflows/monitor.yml
 ```
 
@@ -81,18 +74,18 @@ requirements.txt        # Python dependencies
 
 ```bash
 python -m app.main --config config.yaml
-python -m app.dashboard_exporter --config config.yaml --docs-dir docs
+python scripts/export_dashboard_data.py --config config.yaml --docs-dir docs
 ```
 
 If `SERPER_API_KEY` is missing, the command runs in demo mode and generated reports are marked `DEMO MODE - no live Google data`.
 
-Outputs are written under `data/` and `docs/data/` by default:
+Outputs are written under `data/` and `docs/` by default:
 
 - `data/serp_history.sqlite3` stores all mentions and ranking history.
 - `data/screenshots/` stores Playwright screenshots.
 - `data/entity_map.json` stores a graph-friendly map of query/domain/URL relationships.
 - `docs/data/results.json` stores the dashboard-ready history export.
-- `docs/data/screenshots/` stores dashboard screenshot copies.
+- `docs/screenshots/` stores dashboard screenshot copies.
 
 ## GitHub Pages Dashboard
 
@@ -106,7 +99,7 @@ To enable it:
 4. Select branch `main` and folder `/docs`.
 5. Save the settings.
 
-After GitHub Pages finishes publishing, use the Pages URL as the permanent dashboard link. The workflow updates `docs/data/results.json` and `docs/data/screenshots/` every 6 hours and on manual `workflow_dispatch` runs.
+After GitHub Pages finishes publishing, use the Pages URL as the permanent dashboard link. The workflow updates `docs/data/results.json` and `docs/screenshots/` every 6 hours and on manual `workflow_dispatch` runs.
 
 ## GitHub Actions
 
