@@ -2,4 +2,15 @@ __pycache__/
 *.py[cod]
 .venv/
 .env
-data/
+
+# Local runtime data stays out of git.
+data/*.db
+data/*.sqlite3
+data/screenshots/*
+data/entity_map.json
+
+# GitHub Pages dashboard data is committed by the workflow.
+!docs/data/
+!docs/data/results.json
+!docs/screenshots/
+!docs/screenshots/**
