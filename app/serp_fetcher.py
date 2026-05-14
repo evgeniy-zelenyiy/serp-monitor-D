@@ -124,6 +124,3 @@ class SerperSerpFetcher:
             domain=domain,
             source_type="organic",
         )
-
-
-DataForSeoSerpFetcher = SerperSerpFetcher
