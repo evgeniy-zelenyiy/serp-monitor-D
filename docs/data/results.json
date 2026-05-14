@@ -6,9 +6,11 @@
     "new_mentions": 0,
     "risky_mentions": 0,
     "negative_mentions": 0,
-    "positive_neutral_mentions": 0
+    "positive_mentions": 0,
+    "neutral_mentions": 0
   },
   "mentions": [],
   "screenshots": [],
+  "domains": [],
   "entity_map": null
 }
