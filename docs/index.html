@@ -3,80 +3,78 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SERP Monitoring Dashboard</title>
+    <title>SERP Snapshot Dashboard</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header class="topbar">
       <div>
-        <p class="eyebrow">SERP monitoring</p>
-        <h1 id="projectName">Reputation dashboard</h1>
+        <p class="eyebrow">SERP snapshot monitoring</p>
+        <h1 id="projectName">SERP dashboard</h1>
       </div>
       <div class="timestamp">Updated <span id="generatedAt">loading</span></div>
     </header>
 
     <main>
       <section class="summary" aria-label="Monitoring summary">
-        <article class="metric"><span>Total mentions</span><strong id="totalMentions">0</strong></article>
-        <article class="metric"><span>New mentions</span><strong id="newMentions">0</strong></article>
-        <article class="metric"><span>Risky mentions</span><strong id="riskyMentions">0</strong></article>
-        <article class="metric"><span>Negative mentions</span><strong id="negativeMentions">0</strong></article>
-        <article class="metric"><span>Positive mentions</span><strong id="positiveMentions">0</strong></article>
-        <article class="metric"><span>Neutral mentions</span><strong id="neutralMentions">0</strong></article>
+        <article class="metric"><span>Current top-10 rows</span><strong id="totalMentions">0</strong></article>
+        <article class="metric"><span>New URLs</span><strong id="newMentions">0</strong></article>
+        <article class="metric"><span>Rank changes</span><strong id="changedMentions">0</strong></article>
+        <article class="metric"><span>Disappeared</span><strong id="disappearedMentions">0</strong></article>
+        <article class="metric"><span>Risky / negative</span><strong id="riskMentions">0</strong></article>
+        <article class="metric"><span>Positive / neutral</span><strong id="safeMentions">0</strong></article>
       </section>
 
-      <section class="toolbar" aria-label="Dashboard controls">
-        <div class="filters">
-          <button class="filter active" data-filter="all" type="button">All</button>
-          <button class="filter" data-filter="new" type="button">New</button>
-          <button class="filter" data-filter="risky" type="button">Risky</button>
-          <button class="filter" data-filter="negative" type="button">Negative</button>
-          <button class="filter" data-filter="neutral" type="button">Neutral</button>
-          <button class="filter" data-filter="positive" type="button">Positive</button>
-        </div>
-        <label class="search-box">
-          <span>Search</span>
-          <input id="searchInput" type="search" placeholder="Title, URL, domain, query" autocomplete="off" />
-        </label>
+      <nav class="view-tabs" aria-label="Dashboard views">
+        <button class="view active" data-view="all" type="button">All mentions</button>
+        <button class="view" data-view="new_urls" type="button">New URLs</button>
+        <button class="view" data-view="rank_changes" type="button">Rank changes</button>
+        <button class="view" data-view="disappeared" type="button">Disappeared</button>
+      </nav>
+
+      <nav id="queryTabs" class="query-tabs" aria-label="Query tabs"></nav>
+
+      <section class="toolbar" aria-label="Dashboard filters">
+        <label><span>Query</span><select id="queryFilter"><option value="">All queries</option></select></label>
+        <label><span>Date</span><input id="dateFilter" type="date" /></label>
+        <label><span>Status</span><select id="statusFilter"><option value="">All</option><option>new</option><option>existing</option><option>changed</option><option>disappeared</option></select></label>
+        <label><span>Sentiment</span><select id="sentimentFilter"><option value="">All</option><option>risky</option><option>negative</option><option>neutral</option><option>positive</option></select></label>
+        <label><span>Risk</span><select id="riskFilter"><option value="">All</option><option>high</option><option>medium</option><option>low</option><option>none</option></select></label>
+        <label><span>Domain</span><select id="domainFilter"><option value="">All domains</option></select></label>
       </section>
 
-      <section class="table-shell" aria-label="SERP mentions table">
+      <section class="table-shell" aria-label="SERP snapshots table">
         <table>
           <thead>
             <tr>
-              <th><button data-sort="first_seen" type="button">First seen</button></th>
-              <th><button data-sort="last_seen" type="button">Last seen</button></th>
               <th>Query</th>
-              <th><button data-sort="rank" type="button">Rank</button></th>
+              <th><button data-sort="current_rank" type="button">Current rank</button></th>
+              <th>Previous rank</th>
+              <th>Rank delta</th>
+              <th>Status</th>
               <th>Title</th>
               <th>URL</th>
               <th>Domain</th>
               <th><button data-sort="sentiment" type="button">Sentiment</button></th>
               <th><button data-sort="risk_level" type="button">Risk level</button></th>
               <th>Risk keywords</th>
+              <th><button data-sort="first_seen" type="button">First seen</button></th>
+              <th><button data-sort="last_seen" type="button">Last seen</button></th>
+              <th>Date published</th>
               <th>Source</th>
-              <th>Status</th>
             </tr>
           </thead>
-          <tbody id="mentionsBody">
-            <tr><td colspan="12" class="empty">Loading dashboard data</td></tr>
-          </tbody>
+          <tbody id="mentionsBody"><tr><td colspan="15" class="empty">Loading dashboard data</td></tr></tbody>
         </table>
       </section>
 
       <section class="domain-section" aria-label="Entity and domain summary">
-        <div class="section-heading">
-          <h2>Entity / Domain Summary</h2>
-          <p id="domainCount">0 domains</p>
-        </div>
+        <div class="section-heading"><h2>Entity / Domain Summary</h2><p id="domainCount">0 domains</p></div>
         <div id="domains" class="domain-grid"></div>
       </section>
 
-      <section class="gallery-section" aria-label="Screenshots gallery">
-        <div class="section-heading">
-          <h2>Screenshots</h2>
-          <p id="screenshotCount">0 captures</p>
-        </div>
+      <section class="gallery-section" aria-label="SERP screenshots gallery">
+        <div class="section-heading"><h2>SERP Screenshots</h2><p id="screenshotCount">0 captures</p></div>
         <div id="screenshots" class="gallery"></div>
       </section>
     </main>
