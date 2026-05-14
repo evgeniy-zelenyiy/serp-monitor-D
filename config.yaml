@@ -9,8 +9,14 @@ monitoring:
   country: "BR"
   language: "pt"
   location_name: "Brazil"
+  device: "desktop"
   depth: 10
-  demo_results_per_query: 3
+  demo_results_per_query: 10
+  only_alert_on_changes: true
+  screenshot_mode: "serp"
+  track_disappeared: true
+  extract_publication_date: true
+  publish_dashboard: true
   queries:
     - "\"Dmytro Rukin\""
     - "\"Dmitry Rukin\""
@@ -64,7 +70,6 @@ sentiment:
 
 screenshots:
   enabled: true
-  max_per_run: 10
   timeout_ms: 30000
   full_page: true
 
