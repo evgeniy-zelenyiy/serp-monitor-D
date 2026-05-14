@@ -102,6 +102,8 @@ class DashboardExporter:
         screenshot = self._copy_screenshot(row["screenshot_path"])
         risk_score = float(row["risk_score"] or 0.0)
         sentiment = row["sentiment"] or "neutral"
+        risk_level = row["risk_level"] or self._risk_level(sentiment, risk_score)
+        risk_keywords = row["risk_keywords"] or row["negative_keywords"] or ""
         return {
             "first_seen": first_seen,
             "last_seen": last_seen,
@@ -110,10 +112,11 @@ class DashboardExporter:
             "title": row["title"] or row["url"],
             "url": row["url"],
             "domain": row["domain"] or "",
+            "source_type": row["source_type"] or "organic",
             "sentiment": sentiment,
-            "risk_level": self._risk_level(sentiment, risk_score),
+            "risk_level": risk_level,
             "risk_score": risk_score,
-            "risk_keywords": row["negative_keywords"] or "",
+            "risk_keywords": risk_keywords,
             "status": status,
             "previous_rank": int(previous_rank) if previous_rank is not None else None,
             "screenshot": screenshot,
