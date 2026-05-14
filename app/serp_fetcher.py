@@ -1,4 +1,4 @@
-"""DataForSEO Google SERP client with demo fallback data."""
+"""Serper.dev Google SERP client with demo fallback data."""
 
 from __future__ import annotations
 
@@ -13,53 +13,52 @@ from app.database import Mention
 LOGGER = logging.getLogger(__name__)
 
 
-class DataForSeoSerpFetcher:
-    """Fetch organic Google results from DataForSEO or generate demo mentions."""
+class SerperSerpFetcher:
+    """Fetch organic Google results from Serper.dev or generate demo mentions."""
 
-    BASE_URL = "https://api.dataforseo.com/v3/serp/google/organic/live/advanced"
+    BASE_URL = "https://google.serper.dev/search"
 
-    def __init__(self, login: str, password: str, config: dict) -> None:
-        self.login = login
-        self.password = password
+    def __init__(self, api_key: str | None, config: dict) -> None:
+        self.api_key = api_key
         self.config = config
-        self.demo_mode = not (login and password)
+        self.demo_mode = not api_key
 
     def fetch_all(self) -> list[Mention]:
         if self.demo_mode:
-            LOGGER.warning("DEMO MODE - no live Google data. DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD are missing.")
+            LOGGER.warning("Demo mode: SERPER_API_KEY is missing, using generated SERP results with no live Google data")
             return self._fetch_demo_results()
 
         monitoring = self.config.get("monitoring") or {}
+        queries = monitoring.get("queries") or []
+        LOGGER.info("Live mode with Serper.dev: fetching %d configured queries", len(queries))
         mentions: list[Mention] = []
-        for query in monitoring.get("queries", []):
+        for query in queries:
             mentions.extend(self.fetch_query(query))
         return mentions
 
     def fetch_query(self, query: str) -> list[Mention]:
         monitoring = self.config.get("monitoring") or {}
-        payload = [
-            {
-                "keyword": query,
-                "location_code": monitoring.get("location_code", 2076),
-                "language_code": monitoring.get("language_code", "pt"),
-                "device": monitoring.get("device", "desktop"),
-                "os": monitoring.get("os", "windows"),
-                "depth": monitoring.get("depth", 20),
-            }
-        ]
-        LOGGER.info("Fetching Google SERP for query=%s", query)
+        depth = int(monitoring.get("depth", 10))
+        payload = {
+            "q": query,
+            "gl": str(monitoring.get("country", "BR")).lower(),
+            "hl": monitoring.get("language", "pt"),
+            "location": monitoring.get("location_name", "Brazil"),
+            "num": depth,
+        }
+        headers = {
+            "X-API-KEY": self.api_key or "",
+            "Content-Type": "application/json",
+        }
+
+        LOGGER.info("Fetching Serper.dev organic results for query=%s", query)
         with httpx.Client(timeout=60) as client:
-            response = client.post(self.BASE_URL, auth=(self.login, self.password), json=payload)
+            response = client.post(self.BASE_URL, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
 
-        task = data.get("tasks", [{}])[0]
-        if task.get("status_code") not in (20000, 20100):
-            raise RuntimeError(f"DataForSEO task failed: {task.get('status_message')}")
-
-        items = task.get("result", [{}])[0].get("items", [])
-        organic_items = [item for item in items if item.get("type") == "organic"]
-        return [self._to_mention(query, item) for item in organic_items]
+        organic_items = data.get("organic") or []
+        return [self._to_mention(query, item, index) for index, item in enumerate(organic_items[:depth], start=1)]
 
     def _fetch_demo_results(self) -> list[Mention]:
         monitoring = self.config.get("monitoring") or {}
@@ -102,6 +101,7 @@ class DataForSeoSerpFetcher:
                     snippet=snippet,
                     rank=index,
                     domain="example.com",
+                    source_type="organic",
                 )
             )
         return mentions
@@ -112,14 +112,18 @@ class DataForSeoSerpFetcher:
         return cleaned or "demo-query"
 
     @staticmethod
-    def _to_mention(query: str, item: dict) -> Mention:
-        url = item.get("url", "")
+    def _to_mention(query: str, item: dict, fallback_rank: int) -> Mention:
+        url = item.get("link") or item.get("url") or ""
         domain = urlparse(url).netloc.lower().removeprefix("www.")
         return Mention(
             query=query,
             url=url,
             title=item.get("title") or "",
-            snippet=item.get("description") or "",
-            rank=int(item.get("rank_group") or item.get("rank_absolute") or 0),
+            snippet=item.get("snippet") or "",
+            rank=int(item.get("position") or fallback_rank),
             domain=domain,
+            source_type="organic",
         )
+
+
+DataForSeoSerpFetcher = SerperSerpFetcher
