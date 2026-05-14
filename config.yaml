@@ -5,12 +5,10 @@ project:
   entity_map_path: "data/entity_map.json"
 
 monitoring:
-  provider: "dataforseo"
-  location_code: 2076
+  provider: "serper"
+  country: "BR"
+  language: "pt"
   location_name: "Brazil"
-  language_code: "pt"
-  device: "desktop"
-  os: "windows"
   depth: 10
   demo_results_per_query: 3
   queries:
