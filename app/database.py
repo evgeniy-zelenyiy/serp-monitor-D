@@ -49,6 +49,39 @@ class MentionChange:
 class SerpDatabase:
     """Repository layer for SERP runs and per-query top-10 snapshots."""
 
+    SNAPSHOT_COLUMNS = {
+        "country": "TEXT DEFAULT ''",
+        "language": "TEXT DEFAULT ''",
+        "device": "TEXT DEFAULT 'desktop'",
+        "source_type": "TEXT DEFAULT 'organic'",
+        "sentiment": "TEXT DEFAULT 'neutral'",
+        "risk_score": "REAL DEFAULT 0.0",
+        "risk_level": "TEXT DEFAULT 'none'",
+        "risk_keywords": "TEXT",
+        "negative_keywords": "TEXT",
+        "date_published": "TEXT",
+        "date_published_source": "TEXT",
+        "date_published_confidence": "REAL",
+        "first_seen": "TEXT",
+        "last_seen": "TEXT",
+        "previous_rank": "INTEGER",
+        "rank_delta": "INTEGER",
+        "disappeared_at": "TEXT",
+        "status": "TEXT DEFAULT 'existing'",
+        "screenshot_path": "TEXT",
+    }
+    LEGACY_COLUMNS = {
+        "first_seen": "TEXT",
+        "last_seen": "TEXT",
+        "source_type": "TEXT DEFAULT 'organic'",
+        "sentiment": "TEXT DEFAULT 'neutral'",
+        "risk_score": "REAL DEFAULT 0.0",
+        "risk_level": "TEXT DEFAULT 'none'",
+        "risk_keywords": "TEXT",
+        "negative_keywords": "TEXT",
+        "screenshot_path": "TEXT",
+    }
+
     def __init__(self, path: Path) -> None:
         self.path = path
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -95,7 +128,7 @@ class SerpDatabase:
                 previous_rank INTEGER,
                 rank_delta INTEGER,
                 disappeared_at TEXT,
-                status TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'existing',
                 screenshot_path TEXT,
                 UNIQUE(run_id, query, url, status)
             );
@@ -107,6 +140,8 @@ class SerpDatabase:
             """
         )
         self._ensure_legacy_mentions_table()
+        self._ensure_columns("serp_snapshots", self.SNAPSHOT_COLUMNS)
+        self._ensure_columns("mentions", self.LEGACY_COLUMNS)
         self.connection.commit()
 
     def _ensure_legacy_mentions_table(self) -> None:
@@ -135,6 +170,13 @@ class SerpDatabase:
             );
             """
         )
+
+    def _ensure_columns(self, table: str, expected: dict[str, str]) -> None:
+        existing = {row["name"] for row in self.connection.execute(f"PRAGMA table_info({table})")}
+        for column, definition in expected.items():
+            if column not in existing:
+                LOGGER.info("Adding missing SQLite column %s.%s", table, column)
+                self.connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
     def save_run(self, run_id: str, run_datetime: str, country: str, language: str, device: str, mode: str) -> None:
         self.connection.execute(
@@ -217,34 +259,8 @@ class SerpDatabase:
             status = "new" if is_new else "changed" if is_changed else "existing"
             rank_delta = None if previous_rank is None or mention.rank is None else previous_rank - mention.rank
             stored = self._with_screenshot(mention, screenshot_path)
-            changes.append(
-                MentionChange(
-                    mention=stored,
-                    status=status,
-                    is_new_url=is_new,
-                    is_existing=not is_new,
-                    is_changed=is_changed,
-                    previous_rank=previous_rank,
-                    rank_delta=rank_delta,
-                    first_seen=first_seen,
-                    last_seen=last_seen,
-                )
-            )
-            self._insert_snapshot(
-                run_id,
-                run_datetime,
-                query,
-                country,
-                language,
-                device,
-                stored,
-                first_seen,
-                last_seen,
-                previous_rank,
-                rank_delta,
-                None,
-                status,
-            )
+            changes.append(MentionChange(stored, status, is_new, not is_new, is_changed, previous_rank, rank_delta, first_seen, last_seen))
+            self._insert_snapshot(run_id, run_datetime, query, country, language, device, stored, first_seen, last_seen, previous_rank, rank_delta, None, status)
             self._insert_legacy_mention(run_id, run_datetime, stored, first_seen, last_seen)
 
         if track_disappeared:
@@ -253,34 +269,8 @@ class SerpDatabase:
                     continue
                 mention = self._mention_from_row(previous)
                 rank = int(previous["rank"]) if previous["rank"] is not None else None
-                change = MentionChange(
-                    mention=mention,
-                    status="disappeared",
-                    is_new_url=False,
-                    is_existing=True,
-                    is_changed=False,
-                    previous_rank=rank,
-                    rank_delta=None,
-                    first_seen=previous["first_seen"],
-                    last_seen=previous["last_seen"],
-                    disappeared_at=run_datetime,
-                )
-                changes.append(change)
-                self._insert_snapshot(
-                    run_id,
-                    run_datetime,
-                    query,
-                    country,
-                    language,
-                    device,
-                    mention,
-                    previous["first_seen"],
-                    previous["last_seen"],
-                    rank,
-                    None,
-                    run_datetime,
-                    "disappeared",
-                )
+                changes.append(MentionChange(mention, "disappeared", False, True, False, rank, None, previous["first_seen"], previous["last_seen"], run_datetime))
+                self._insert_snapshot(run_id, run_datetime, query, country, language, device, mention, previous["first_seen"], previous["last_seen"], rank, None, run_datetime, "disappeared")
 
         self.connection.commit()
         return changes
@@ -321,21 +311,7 @@ class SerpDatabase:
                 :first_seen, :last_seen, :previous_rank, :rank_delta, :disappeared_at, :status, :screenshot_path
             )
             """,
-            {
-                "run_id": run_id,
-                "run_datetime": run_datetime,
-                "query": query,
-                "country": country,
-                "language": language,
-                "device": device,
-                "first_seen": first_seen,
-                "last_seen": last_seen,
-                "previous_rank": previous_rank,
-                "rank_delta": rank_delta,
-                "disappeared_at": disappeared_at,
-                "status": status,
-                **asdict(mention),
-            },
+            {"run_id": run_id, "run_datetime": run_datetime, "query": query, "country": country, "language": language, "device": device, "first_seen": first_seen, "last_seen": last_seen, "previous_rank": previous_rank, "rank_delta": rank_delta, "disappeared_at": disappeared_at, "status": status, **asdict(mention)},
         )
 
     def _insert_legacy_mention(self, run_id: str, collected_at: str, mention: Mention, first_seen: str, last_seen: str) -> None:
