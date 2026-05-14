@@ -1,4 +1,4 @@
-"""Export SQLite SERP history to the GitHub Pages dashboard payload."""
+"""Export SQLite SERP snapshots to the GitHub Pages dashboard payload."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import logging
 import shutil
 import sqlite3
 import sys
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -44,15 +44,27 @@ class DashboardExport:
         self.screenshots_dir.mkdir(parents=True, exist_ok=True)
         self._ensure_database_schema()
 
-        mentions = [self._row_to_mention(row) for row in self._latest_rows()]
+        rows = self._snapshot_rows()
+        latest_run_id = self._latest_run_id(rows)
+        latest = [self._row_to_item(row) for row in rows if row["run_id"] == latest_run_id and row["status"] != "disappeared"]
+        all_items = [self._row_to_item(row) for row in rows]
         entity_map = self._load_entity_map()
         payload = {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "project": self.config.get("project", {}).get("name", "SERP Monitor"),
-            "summary": self._summary(mentions),
-            "mentions": mentions,
-            "screenshots": [mention for mention in mentions if mention.get("screenshot")],
-            "domains": self._domain_summary(mentions, entity_map),
+            "latest_run_id": latest_run_id,
+            "queries": sorted({item["query"] for item in latest}),
+            "summary": self._summary(all_items, latest_run_id),
+            "latest_top10": latest,
+            "mentions": all_items,
+            "views": {
+                "all": all_items,
+                "new_urls": [item for item in all_items if item["status"] == "new"],
+                "rank_changes": [item for item in all_items if item["status"] == "changed"],
+                "disappeared": [item for item in all_items if item["status"] == "disappeared"],
+            },
+            "screenshots": self._screenshots(all_items),
+            "domains": self._domain_summary(latest, entity_map),
             "entity_map": entity_map,
         }
         self.results_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -71,67 +83,56 @@ class DashboardExport:
         finally:
             database.close()
 
-    def _latest_rows(self) -> list[sqlite3.Row]:
+    def _snapshot_rows(self) -> list[sqlite3.Row]:
         if not self.database_path.exists():
             LOGGER.warning("SQLite database does not exist yet: %s", self.database_path)
             return []
-
         connection = sqlite3.connect(self.database_path)
         connection.row_factory = sqlite3.Row
         try:
             return connection.execute(
                 """
-                WITH ranked AS (
-                    SELECT
-                        m.*,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY m.query, m.url
-                            ORDER BY m.collected_at DESC, m.id DESC
-                        ) AS row_number,
-                        LAG(m.rank) OVER (
-                            PARTITION BY m.query, m.url
-                            ORDER BY m.collected_at ASC, m.id ASC
-                        ) AS previous_rank,
-                        COUNT(*) OVER (PARTITION BY m.query, m.url) AS seen_count,
-                        MIN(COALESCE(m.first_seen, m.collected_at)) OVER (PARTITION BY m.query, m.url) AS historical_first_seen,
-                        MAX(COALESCE(m.last_seen, m.collected_at)) OVER (PARTITION BY m.query, m.url) AS historical_last_seen
-                    FROM mentions m
-                )
-                SELECT * FROM ranked
-                WHERE row_number = 1
-                ORDER BY historical_last_seen DESC, query ASC, rank ASC
+                SELECT s.*, r.mode
+                FROM serp_snapshots s
+                LEFT JOIN runs r ON r.run_id = s.run_id
+                ORDER BY s.run_datetime DESC, s.query ASC, COALESCE(s.rank, 999) ASC, s.id DESC
                 """
             ).fetchall()
         finally:
             connection.close()
 
-    def _row_to_mention(self, row: sqlite3.Row) -> dict[str, Any]:
-        rank = int(row["rank"])
-        previous_rank = row["previous_rank"]
-        status = "new"
-        if int(row["seen_count"] or 0) > 1:
-            status = "changed" if previous_rank is not None and int(previous_rank) != rank else "existing"
+    @staticmethod
+    def _latest_run_id(rows: list[sqlite3.Row]) -> str | None:
+        return rows[0]["run_id"] if rows else None
 
-        sentiment = row["sentiment"] or "neutral"
-        risk_score = float(row["risk_score"] or 0.0)
-        risk_level = row["risk_level"] or self._risk_level(sentiment, risk_score)
-        risk_keywords = row["risk_keywords"] or row["negative_keywords"] or ""
+    def _row_to_item(self, row: sqlite3.Row) -> dict[str, Any]:
+        screenshot = self._copy_screenshot(row["screenshot_path"])
         return {
-            "first_seen": row["historical_first_seen"] or row["first_seen"] or row["collected_at"],
-            "last_seen": row["historical_last_seen"] or row["last_seen"] or row["collected_at"],
+            "run_id": row["run_id"],
+            "run_datetime": row["run_datetime"],
             "query": row["query"],
-            "rank": rank,
+            "country": row["country"],
+            "language": row["language"],
+            "device": row["device"],
+            "current_rank": int(row["rank"]) if row["rank"] is not None else None,
+            "rank": int(row["rank"]) if row["rank"] is not None else None,
+            "previous_rank": int(row["previous_rank"]) if row["previous_rank"] is not None else None,
+            "rank_delta": int(row["rank_delta"]) if row["rank_delta"] is not None else None,
+            "status": row["status"],
             "title": row["title"] or row["url"],
             "url": row["url"],
             "domain": row["domain"] or "",
-            "sentiment": sentiment,
-            "risk_level": risk_level,
-            "risk_score": risk_score,
-            "risk_keywords": risk_keywords,
+            "sentiment": row["sentiment"] or "neutral",
+            "risk_level": row["risk_level"] or "none",
+            "risk_keywords": row["risk_keywords"] or row["negative_keywords"] or "",
+            "first_seen": row["first_seen"],
+            "last_seen": row["last_seen"],
+            "disappeared_at": row["disappeared_at"],
+            "date_published": row["date_published"],
+            "date_published_source": row["date_published_source"],
+            "date_published_confidence": row["date_published_confidence"],
             "source_type": row["source_type"] or "organic",
-            "status": status,
-            "previous_rank": int(previous_rank) if previous_rank is not None else None,
-            "screenshot": self._copy_screenshot(row["screenshot_path"]),
+            "screenshot": screenshot,
         }
 
     def _copy_screenshot(self, screenshot_path: str | None) -> str | None:
@@ -140,27 +141,37 @@ class DashboardExport:
         source = Path(screenshot_path)
         if not source.exists():
             return None
-        target = self.screenshots_dir / source.name
+        run_date = source.parent.name if source.parent.name else "screenshots"
+        target_dir = self.screenshots_dir / run_date
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target = target_dir / source.name
         if source.resolve() != target.resolve():
             shutil.copy2(source, target)
-        return f"screenshots/{target.name}"
+        return f"screenshots/{run_date}/{target.name}"
+
+    def _screenshots(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        seen: set[tuple[str, str, str]] = set()
+        screenshots = []
+        for item in items:
+            if not item.get("screenshot"):
+                continue
+            key = (item["run_datetime"][:10], item["query"], item["screenshot"])
+            if key in seen:
+                continue
+            seen.add(key)
+            screenshots.append({"date": key[0], "query": item["query"], "path": item["screenshot"]})
+        return screenshots
 
     @staticmethod
-    def _risk_level(sentiment: str, risk_score: float) -> str:
-        if sentiment == "negative" or risk_score >= 0.75:
-            return "high"
-        if sentiment == "risky" or risk_score >= 0.35:
-            return "medium"
-        if risk_score > 0:
-            return "low"
-        return "none"
-
-    @staticmethod
-    def _summary(mentions: list[dict[str, Any]]) -> dict[str, int]:
-        sentiments = Counter(mention["sentiment"] for mention in mentions)
+    def _summary(items: list[dict[str, Any]], latest_run_id: str | None) -> dict[str, int]:
+        latest = [item for item in items if item["run_id"] == latest_run_id and item["status"] != "disappeared"]
+        statuses = Counter(item["status"] for item in items if item["run_id"] == latest_run_id)
+        sentiments = Counter(item["sentiment"] for item in latest)
         return {
-            "total_mentions": len(mentions),
-            "new_mentions": sum(1 for mention in mentions if mention["status"] == "new"),
+            "total_mentions": len(latest),
+            "new_mentions": statuses.get("new", 0),
+            "changed_mentions": statuses.get("changed", 0),
+            "disappeared_mentions": statuses.get("disappeared", 0),
             "risky_mentions": sentiments.get("risky", 0),
             "negative_mentions": sentiments.get("negative", 0),
             "positive_mentions": sentiments.get("positive", 0),
@@ -168,33 +179,20 @@ class DashboardExport:
         }
 
     @staticmethod
-    def _domain_summary(mentions: list[dict[str, Any]], entity_map: dict[str, Any] | None) -> list[dict[str, Any]]:
+    def _domain_summary(items: list[dict[str, Any]], entity_map: dict[str, Any] | None) -> list[dict[str, Any]]:
         domains: dict[str, dict[str, Any]] = {}
-        for mention in mentions:
-            domain = mention.get("domain") or "unknown"
-            entry = domains.setdefault(
-                domain,
-                {
-                    "domain": domain,
-                    "total": 0,
-                    "best_rank": None,
-                    "risky": 0,
-                    "negative": 0,
-                    "positive": 0,
-                    "neutral": 0,
-                },
-            )
+        for item in items:
+            domain = item.get("domain") or "unknown"
+            entry = domains.setdefault(domain, {"domain": domain, "total": 0, "best_rank": None, "risky": 0, "negative": 0, "positive": 0, "neutral": 0})
             entry["total"] += 1
-            entry[mention.get("sentiment") or "neutral"] = entry.get(mention.get("sentiment") or "neutral", 0) + 1
-            rank = int(mention.get("rank") or 0)
+            entry[item.get("sentiment") or "neutral"] = entry.get(item.get("sentiment") or "neutral", 0) + 1
+            rank = item.get("current_rank")
             if rank and (entry["best_rank"] is None or rank < entry["best_rank"]):
                 entry["best_rank"] = rank
-
         if entity_map:
             for node in entity_map.get("nodes", []):
                 if node.get("type") == "domain" and node.get("label") in domains:
                     domains[node["label"]]["entity_sentiment_counts"] = node.get("sentiment_counts", {})
-
         return sorted(domains.values(), key=lambda item: (-item["total"], item["domain"]))
 
     def _load_entity_map(self) -> dict[str, Any] | None:
