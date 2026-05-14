@@ -1,35 +1,42 @@
 # Python SERP Monitoring System
 
-A clean, scheduled Google SERP monitoring system for reputation management and SERM. It collects Google mentions through DataForSEO when credentials are available, falls back to deterministic demo SERP data when they are not, stores historical ranking data in SQLite, classifies sentiment and risk, captures screenshots with Playwright, sends Telegram alerts, and produces an entity map JSON.
+A clean, scheduled Google SERP monitoring system for reputation management and SERM. It collects Google mentions through DataForSEO when credentials are available, falls back to deterministic demo SERP data when they are not, stores historical ranking data in SQLite, classifies sentiment and risk, captures screenshots with Playwright, sends Telegram alerts, exports a static GitHub Pages dashboard, and produces an entity map JSON.
 
 ## Features
 
 - Collect Google SERP mentions for configured brand and reputation queries.
 - Run in demo mode without DataForSEO credentials so CI still validates the full pipeline.
-- Save every mention and run to SQLite history.
+- Save every mention and run to SQLite history with `first_seen` and `last_seen` dates.
 - Detect new URLs and ranking changes by query and URL.
 - Analyze sentiment as `positive`, `neutral`, `negative`, or `risky`.
 - Flag Portuguese negative keywords such as `golpe`, `fraude`, `denúncia`, `reclamação`, and `reclame aqui`.
 - Capture local screenshots of result URLs with Playwright.
 - Send Telegram reports and screenshots for risky/negative alerts.
 - Build an entity map JSON linking queries, URLs, domains, ranks, and sentiment.
-- Run automatically with GitHub Actions every 3 days.
+- Publish a permanent static dashboard from the `/docs` folder with sortable tables, filters, summary cards, and screenshots.
+- Run automatically with GitHub Actions every 6 hours.
 
 ## Project structure
 
 ```text
 app/
-  main.py              # CLI orchestration
-  serp_fetcher.py      # DataForSEO Google organic SERP API client + demo fallback
-  sentiment.py         # OpenAI + Portuguese keyword sentiment/risk analysis
-  screenshots.py       # Playwright screenshot capture
-  telegram_report.py   # Telegram reporting
-  entity_map.py        # Entity map JSON graph builder
-  database.py          # SQLite persistence and change detection
-  config_loader.py     # YAML and environment config loading
-config.yaml            # Monitoring configuration
-requirements.txt       # Python dependencies
-.env.example           # Required environment variables
+  main.py               # CLI orchestration
+  serp_fetcher.py       # DataForSEO Google organic SERP API client + demo fallback
+  sentiment.py          # OpenAI + Portuguese keyword sentiment/risk analysis
+  screenshots.py        # Playwright screenshot capture
+  telegram_report.py    # Telegram reporting
+  entity_map.py         # Entity map JSON graph builder
+  database.py           # SQLite persistence and change detection
+  config_loader.py      # YAML and environment config loading
+  dashboard_exporter.py # Static dashboard JSON and screenshot exporter
+docs/
+  index.html            # GitHub Pages dashboard
+  styles.css            # Dashboard styles
+  app.js                # Dashboard filters, sorting, and rendering
+  data/results.json     # Auto-updated dashboard data
+config.yaml             # Monitoring configuration
+requirements.txt        # Python dependencies
+.env.example            # Environment variables
 .github/workflows/monitor.yml
 ```
 
@@ -73,19 +80,36 @@ requirements.txt       # Python dependencies
 
 ```bash
 python -m app.main --config config.yaml
+python -m app.dashboard_exporter --config config.yaml --docs-dir docs
 ```
 
 If `DATAFORSEO_LOGIN` and `DATAFORSEO_PASSWORD` are missing, the command runs in demo mode and generated reports are marked `DEMO MODE - no live Google data`.
 
-Outputs are written under `data/` by default:
+Outputs are written under `data/` and `docs/data/` by default:
 
 - `data/serp_history.sqlite3` stores all mentions and ranking history.
 - `data/screenshots/` stores Playwright screenshots.
 - `data/entity_map.json` stores a graph-friendly map of query/domain/URL relationships.
+- `docs/data/results.json` stores the dashboard-ready history export.
+- `docs/data/screenshots/` stores dashboard screenshot copies.
+
+## GitHub Pages Dashboard
+
+The dashboard is a static site served from the repository `/docs` folder. It uses a single permanent GitHub Pages URL and refreshes automatically when `.github/workflows/monitor.yml` commits updated files after each run.
+
+To enable it:
+
+1. Open the repository on GitHub.
+2. Go to `Settings` -> `Pages`.
+3. Set `Source` to `Deploy from a branch`.
+4. Select branch `main` and folder `/docs`.
+5. Save the settings.
+
+After GitHub Pages finishes publishing, use the Pages URL as the permanent dashboard link. The workflow updates `docs/data/results.json` and `docs/data/screenshots/` every 6 hours and on manual `workflow_dispatch` runs.
 
 ## GitHub Actions
 
-The workflow in `.github/workflows/monitor.yml` runs every 3 days and can also be triggered manually with `workflow_dispatch`.
+The workflow in `.github/workflows/monitor.yml` runs every 6 hours and can also be triggered manually with `workflow_dispatch`.
 
 Add these repository secrets for live monitoring and delivery:
 
@@ -95,11 +119,12 @@ Add these repository secrets for live monitoring and delivery:
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
 
-The workflow succeeds without these secrets by using demo SERP data and uploading the generated SQLite, entity map, and screenshot artifacts. Optionally add the repository variable `OPENAI_MODEL`; otherwise the workflow uses `gpt-4o-mini`.
+The workflow succeeds without these secrets by using demo SERP data, exporting dashboard data, committing updated `/docs` files back to `main`, and uploading generated artifacts. Optionally add the repository variable `OPENAI_MODEL`; otherwise the workflow uses `gpt-4o-mini`.
 
 ## Notes
 
 - The monitor compares each `(query, url)` pair against the latest previous rank to detect new URLs and position movement.
+- `first_seen` is preserved from the earliest observation for each `(query, url)` pair; `last_seen` updates on every run where that mention appears.
 - Demo mode keeps DataForSEO support intact and only activates when login or password is missing.
 - If OpenAI classification is unavailable, the system still runs with the local Portuguese negative keyword heuristic.
-- Screenshot failures are logged but do not stop mention collection or alerting.
+- Screenshot failures are logged but do not stop mention collection, dashboard export, or alerting.
