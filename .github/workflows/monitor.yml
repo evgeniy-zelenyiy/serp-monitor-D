@@ -52,6 +52,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs/data docs/screenshots
           git add docs/data/results.json docs/screenshots docs/index.html docs/styles.css docs/app.js
           git diff --cached --quiet || git commit -m "Update dashboard data"
           git pull --rebase origin main
@@ -65,7 +66,7 @@ jobs:
           path: |
             data/*.sqlite3
             data/*.json
-            data/screenshots/*.png
+            data/screenshots/**/*.png
             docs/data/results.json
-            docs/screenshots/*.png
+            docs/screenshots/**/*.png
           if-no-files-found: ignore
