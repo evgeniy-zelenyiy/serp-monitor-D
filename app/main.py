@@ -11,7 +11,7 @@ from app.database import SerpDatabase
 from app.entity_map import EntityMapBuilder
 from app.screenshots import ScreenshotService
 from app.sentiment import SentimentAnalyzer
-from app.serp_fetcher import DataForSeoSerpFetcher
+from app.serp_fetcher import SerperSerpFetcher
 from app.telegram_report import TelegramReporter
 
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
@@ -30,7 +30,7 @@ def run(config_path: str) -> None:
     database.initialize()
 
     try:
-        fetcher = DataForSeoSerpFetcher(settings.dataforseo_login, settings.dataforseo_password, settings.raw)
+        fetcher = SerperSerpFetcher(settings.serper_api_key, settings.raw)
         analyzer = SentimentAnalyzer(settings.raw, settings.openai_api_key)
         screenshots = ScreenshotService(settings.screenshots_dir, settings.raw)
         reporter = TelegramReporter(settings.telegram_bot_token, settings.telegram_chat_id, settings.raw)
