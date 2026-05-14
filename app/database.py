@@ -22,7 +22,10 @@ class Mention:
     domain: str
     sentiment: str = "neutral"
     risk_score: float = 0.0
+    risk_level: str = "none"
+    risk_keywords: str = ""
     negative_keywords: str = ""
+    source_type: str = "organic"
     screenshot_path: str | None = None
 
 
@@ -59,8 +62,11 @@ class SerpDatabase:
                 snippet TEXT,
                 rank INTEGER NOT NULL,
                 domain TEXT,
+                source_type TEXT NOT NULL DEFAULT 'organic',
                 sentiment TEXT NOT NULL,
                 risk_score REAL NOT NULL,
+                risk_level TEXT NOT NULL DEFAULT 'none',
+                risk_keywords TEXT,
                 negative_keywords TEXT,
                 screenshot_path TEXT,
                 UNIQUE(run_id, query, url)
@@ -70,20 +76,40 @@ class SerpDatabase:
             CREATE INDEX IF NOT EXISTS idx_mentions_collected_at ON mentions(collected_at);
             """
         )
-        self._ensure_seen_columns()
+        self._ensure_columns()
         self.connection.execute("CREATE INDEX IF NOT EXISTS idx_mentions_seen ON mentions(first_seen, last_seen)")
         self.connection.commit()
 
-    def _ensure_seen_columns(self) -> None:
+    def _ensure_columns(self) -> None:
         columns = {row["name"] for row in self.connection.execute("PRAGMA table_info(mentions)").fetchall()}
-        if "first_seen" not in columns:
-            LOGGER.info("Adding first_seen column to mentions table")
-            self.connection.execute("ALTER TABLE mentions ADD COLUMN first_seen TEXT")
-        if "last_seen" not in columns:
-            LOGGER.info("Adding last_seen column to mentions table")
-            self.connection.execute("ALTER TABLE mentions ADD COLUMN last_seen TEXT")
+        migrations = {
+            "first_seen": "ALTER TABLE mentions ADD COLUMN first_seen TEXT",
+            "last_seen": "ALTER TABLE mentions ADD COLUMN last_seen TEXT",
+            "source_type": "ALTER TABLE mentions ADD COLUMN source_type TEXT NOT NULL DEFAULT 'organic'",
+            "risk_level": "ALTER TABLE mentions ADD COLUMN risk_level TEXT NOT NULL DEFAULT 'none'",
+            "risk_keywords": "ALTER TABLE mentions ADD COLUMN risk_keywords TEXT",
+        }
+        for column, statement in migrations.items():
+            if column not in columns:
+                LOGGER.info("Adding %s column to mentions table", column)
+                self.connection.execute(statement)
+
         self.connection.execute("UPDATE mentions SET first_seen = collected_at WHERE first_seen IS NULL")
         self.connection.execute("UPDATE mentions SET last_seen = collected_at WHERE last_seen IS NULL")
+        self.connection.execute("UPDATE mentions SET source_type = 'organic' WHERE source_type IS NULL OR source_type = ''")
+        self.connection.execute("UPDATE mentions SET risk_keywords = negative_keywords WHERE risk_keywords IS NULL")
+        self.connection.execute(
+            """
+            UPDATE mentions
+            SET risk_level = CASE
+                WHEN sentiment = 'negative' OR risk_score >= 0.75 THEN 'high'
+                WHEN sentiment = 'risky' OR risk_score >= 0.35 THEN 'medium'
+                WHEN risk_score > 0 THEN 'low'
+                ELSE 'none'
+            END
+            WHERE risk_level IS NULL OR risk_level = '' OR risk_level = 'none'
+            """
+        )
 
     def previous_rank(self, query: str, url: str) -> int | None:
         row = self.connection.execute(
@@ -129,10 +155,12 @@ class SerpDatabase:
                 """
                 INSERT OR IGNORE INTO mentions (
                     run_id, collected_at, first_seen, last_seen, query, url, title, snippet,
-                    rank, domain, sentiment, risk_score, negative_keywords, screenshot_path
+                    rank, domain, source_type, sentiment, risk_score, risk_level,
+                    risk_keywords, negative_keywords, screenshot_path
                 ) VALUES (
                     :run_id, :collected_at, :first_seen, :last_seen, :query, :url, :title, :snippet,
-                    :rank, :domain, :sentiment, :risk_score, :negative_keywords, :screenshot_path
+                    :rank, :domain, :source_type, :sentiment, :risk_score, :risk_level,
+                    :risk_keywords, :negative_keywords, :screenshot_path
                 )
                 """,
                 {
