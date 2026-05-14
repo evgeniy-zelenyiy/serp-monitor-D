@@ -120,7 +120,7 @@ function renderGallery() {
             <img src="${escapeHtml(mention.screenshot)}" alt="Screenshot for ${escapeHtml(mention.title)}" loading="lazy" />
           </a>
           <figcaption>
-            <strong>${escapeHtml(mention.sentiment)}</strong> · #${escapeHtml(mention.rank)} · ${escapeHtml(mention.domain)}<br />
+            <strong>${escapeHtml(mention.sentiment)}</strong> | #${escapeHtml(mention.rank)} | ${escapeHtml(mention.domain)}<br />
             ${escapeHtml(mention.title)}
           </figcaption>
         </figure>
