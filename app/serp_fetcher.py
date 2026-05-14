@@ -24,12 +24,12 @@ class SerperSerpFetcher:
         self.demo_mode = not api_key
 
     def fetch_all(self) -> list[Mention]:
+        monitoring = self.config.get("monitoring") or {}
+        queries = monitoring.get("queries") or []
         if self.demo_mode:
             LOGGER.warning("Demo mode: SERPER_API_KEY is missing, using generated SERP results with no live Google data")
             return self._fetch_demo_results()
 
-        monitoring = self.config.get("monitoring") or {}
-        queries = monitoring.get("queries") or []
         LOGGER.info("Live mode with Serper.dev: fetching %d configured queries", len(queries))
         mentions: list[Mention] = []
         for query in queries:
@@ -46,24 +46,21 @@ class SerperSerpFetcher:
             "location": monitoring.get("location_name", "Brazil"),
             "num": depth,
         }
-        headers = {
-            "X-API-KEY": self.api_key or "",
-            "Content-Type": "application/json",
-        }
+        headers = {"X-API-KEY": self.api_key or "", "Content-Type": "application/json"}
 
-        LOGGER.info("Fetching Serper.dev organic results for query=%s", query)
+        LOGGER.info("Fetching Serper.dev top-%d organic results for query=%s", depth, query)
         with httpx.Client(timeout=60) as client:
             response = client.post(self.BASE_URL, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
 
         organic_items = data.get("organic") or []
-        return [self._to_mention(query, item, index) for index, item in enumerate(organic_items[:depth], start=1)]
+        return [self._to_mention(query, item, rank) for rank, item in enumerate(organic_items[:depth], start=1)]
 
     def _fetch_demo_results(self) -> list[Mention]:
         monitoring = self.config.get("monitoring") or {}
         queries = monitoring.get("queries") or ["Demo Brand"]
-        max_results = max(1, int(monitoring.get("demo_results_per_query", 3)))
+        max_results = max(1, int(monitoring.get("demo_results_per_query", monitoring.get("depth", 10))))
 
         mentions: list[Mention] = []
         for query in queries:
@@ -72,34 +69,28 @@ class SerperSerpFetcher:
 
     def _demo_mentions_for_query(self, query: str, max_results: int) -> list[Mention]:
         slug = self._slugify(query)
-        templates = [
-            (
-                "Official profile for {query}",
-                "Reference result generated for workflow validation and SERP history storage.",
-                "official-profile",
-            ),
-            (
-                "Reclamação and fraude risk mention for {query}",
-                "Demo reputation result containing reclamação, fraude and risco signals for sentiment testing.",
-                "risk-mention",
-            ),
-            (
-                "Positive industry profile mentioning {query}",
-                "Demo positive result used to validate neutral and positive-looking SERP mentions.",
-                "industry-profile",
-            ),
-        ]
-
         mentions: list[Mention] = []
-        for index, (title, snippet, path) in enumerate(templates[:max_results], start=1):
+        for rank in range(1, max_results + 1):
+            risky = rank == 2
+            path = "risk-mention" if risky else f"result-{rank}"
+            title = (
+                f"Reclamação and fraude risk mention for {query}"
+                if risky
+                else f"Demo organic result {rank} for {query}"
+            )
+            snippet = (
+                "Demo reputation result containing reclamação, fraude and risco signals for sentiment testing."
+                if risky
+                else "Reference organic result generated for workflow validation and SERP snapshot storage."
+            )
             url = f"https://example.com/demo-serp/{slug}/{path}"
             mentions.append(
                 Mention(
                     query=query,
                     url=url,
-                    title=title.format(query=query),
+                    title=title,
                     snippet=snippet,
-                    rank=index,
+                    rank=rank,
                     domain="example.com",
                     source_type="organic",
                 )
@@ -112,7 +103,7 @@ class SerperSerpFetcher:
         return cleaned or "demo-query"
 
     @staticmethod
-    def _to_mention(query: str, item: dict, fallback_rank: int) -> Mention:
+    def _to_mention(query: str, item: dict, organic_rank: int) -> Mention:
         url = item.get("link") or item.get("url") or ""
         domain = urlparse(url).netloc.lower().removeprefix("www.")
         return Mention(
@@ -120,7 +111,7 @@ class SerperSerpFetcher:
             url=url,
             title=item.get("title") or "",
             snippet=item.get("snippet") or "",
-            rank=int(item.get("position") or fallback_rank),
+            rank=organic_rank,
             domain=domain,
             source_type="organic",
         )
