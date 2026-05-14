@@ -49,8 +49,14 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "country": "BR",
         "language": "pt",
         "location_name": "Brazil",
+        "device": "desktop",
         "depth": 10,
-        "demo_results_per_query": 3,
+        "demo_results_per_query": 10,
+        "only_alert_on_changes": True,
+        "screenshot_mode": "serp",
+        "track_disappeared": True,
+        "extract_publication_date": True,
+        "publish_dashboard": True,
     },
     "sentiment": {
         "use_openai": True,
@@ -59,7 +65,6 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "screenshots": {
         "enabled": True,
-        "max_per_run": 10,
         "timeout_ms": 30000,
         "full_page": True,
     },
@@ -133,6 +138,8 @@ def _normalize_legacy_config(config: dict[str, Any]) -> dict[str, Any]:
         monitoring["language"] = monitoring.get("language_code") or serp.get("language") or serp.get("language_code") or "pt"
     if "location_name" not in monitoring and serp.get("location_name"):
         monitoring["location_name"] = serp["location_name"]
+    if "device" not in monitoring and serp.get("device"):
+        monitoring["device"] = serp["device"]
     if "depth" not in monitoring and serp.get("depth"):
         monitoring["depth"] = serp["depth"]
 
