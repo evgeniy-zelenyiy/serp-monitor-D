@@ -36,6 +36,7 @@ class ScreenshotService:
         mentions: Iterable[Mention],
         country: str,
         language: str,
+        queries: Iterable[str] | None = None,
     ) -> dict[str, str]:
         mentions_by_query: dict[str, list[Mention]] = defaultdict(list)
         for mention in mentions:
@@ -44,6 +45,7 @@ class ScreenshotService:
         if not self.config.get("enabled", True) or self.monitoring.get("screenshot_mode", "serp") != "serp":
             return {}
 
+        snapshot_queries = list(queries or mentions_by_query.keys())
         run_date = _run_date(run_datetime)
         output_dir = self.screenshots_dir / run_date
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -53,7 +55,8 @@ class ScreenshotService:
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=True)
             page = browser.new_page(viewport={"width": 1280, "height": 1600})
-            for query, query_mentions in mentions_by_query.items():
+            for query in snapshot_queries:
+                query_mentions = mentions_by_query.get(query, [])
                 try:
                     filename = f"{_safe_slug(query)}-{country.lower()}-{language.lower()}-top10.png"
                     path = output_dir / filename
@@ -90,6 +93,8 @@ class ScreenshotService:
                 </article>
                 """
             )
+        if not rows:
+            rows.append('<article class="empty">No organic results returned for this query in the current snapshot.</article>')
         return f"""
         <!doctype html>
         <html>
@@ -107,6 +112,7 @@ class ScreenshotService:
               p {{ color: #394150; font-size: 15px; line-height: 1.45; margin: 0; }}
               .chips {{ display: flex; gap: 8px; margin-top: 10px; }}
               .chips span {{ background: #eef2f7; border-radius: 999px; color: #334155; font-size: 12px; font-weight: 700; padding: 4px 8px; text-transform: uppercase; }}
+              .empty {{ background: #fff; border: 1px dashed #cbd5e1; border-radius: 10px; color: #64748b; padding: 22px; }}
             </style>
           </head>
           <body>
