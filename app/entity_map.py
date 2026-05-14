@@ -37,9 +37,12 @@ class EntityMapBuilder:
                 "type": "url",
                 "label": mention.title or mention.url,
                 "url": mention.url,
+                "source_type": mention.source_type,
                 "rank": mention.rank,
                 "sentiment": mention.sentiment,
                 "risk_score": mention.risk_score,
+                "risk_level": mention.risk_level,
+                "risk_keywords": mention.risk_keywords,
             }
             edges.append({"source": query_id, "target": url_id, "type": "returns", "rank": mention.rank})
             edges.append({"source": url_id, "target": domain_id, "type": "hosted_on"})
