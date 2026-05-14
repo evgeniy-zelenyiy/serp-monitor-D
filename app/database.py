@@ -68,10 +68,10 @@ class SerpDatabase:
 
             CREATE INDEX IF NOT EXISTS idx_mentions_query_url ON mentions(query, url);
             CREATE INDEX IF NOT EXISTS idx_mentions_collected_at ON mentions(collected_at);
-            CREATE INDEX IF NOT EXISTS idx_mentions_seen ON mentions(first_seen, last_seen);
             """
         )
         self._ensure_seen_columns()
+        self.connection.execute("CREATE INDEX IF NOT EXISTS idx_mentions_seen ON mentions(first_seen, last_seen)")
         self.connection.commit()
 
     def _ensure_seen_columns(self) -> None:
