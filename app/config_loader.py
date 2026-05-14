@@ -44,12 +44,12 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "entity_map_path": "data/entity_map.json",
     },
     "monitoring": {
+        "provider": "serper",
         "queries": [],
-        "location_code": 2076,
-        "language_code": "pt",
-        "device": "desktop",
-        "os": "windows",
-        "depth": 20,
+        "country": "BR",
+        "language": "pt",
+        "location_name": "Brazil",
+        "depth": 10,
         "demo_results_per_query": 3,
     },
     "sentiment": {
@@ -80,8 +80,7 @@ class Settings:
     """Runtime settings composed from YAML and environment variables."""
 
     raw: dict[str, Any]
-    dataforseo_login: str
-    dataforseo_password: str
+    serper_api_key: str | None
     openai_api_key: str | None
     telegram_bot_token: str | None
     telegram_chat_id: str | None
@@ -128,12 +127,12 @@ def _normalize_legacy_config(config: dict[str, Any]) -> dict[str, Any]:
 
     if "queries" not in monitoring and "queries" in normalized:
         monitoring["queries"] = normalized["queries"]
-    if "location_code" not in monitoring and serp.get("location_code"):
-        monitoring["location_code"] = serp["location_code"]
-    if "language_code" not in monitoring:
-        monitoring["language_code"] = serp.get("language_code") or serp.get("language") or "pt"
-    if "device" not in monitoring and serp.get("device"):
-        monitoring["device"] = serp["device"]
+    if "country" not in monitoring:
+        monitoring["country"] = monitoring.get("country_code") or serp.get("country") or "BR"
+    if "language" not in monitoring:
+        monitoring["language"] = monitoring.get("language_code") or serp.get("language") or serp.get("language_code") or "pt"
+    if "location_name" not in monitoring and serp.get("location_name"):
+        monitoring["location_name"] = serp["location_name"]
     if "depth" not in monitoring and serp.get("depth"):
         monitoring["depth"] = serp["depth"]
 
@@ -158,8 +157,7 @@ def load_settings(config_path: str | Path = "config.yaml") -> Settings:
 
     return Settings(
         raw=config,
-        dataforseo_login=os.getenv("DATAFORSEO_LOGIN", ""),
-        dataforseo_password=os.getenv("DATAFORSEO_PASSWORD", ""),
+        serper_api_key=os.getenv("SERPER_API_KEY"),
         openai_api_key=os.getenv("OPENAI_API_KEY"),
         telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN"),
         telegram_chat_id=os.getenv("TELEGRAM_CHAT_ID"),
