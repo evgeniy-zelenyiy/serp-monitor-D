@@ -37,11 +37,14 @@ class SentimentAnalyzer:
         risk_score = min(1.0, 0.25 + (0.15 * len(matched))) if matched else 0.0
 
         if not self.client:
+            keywords = ", ".join(matched)
             return replace(
                 mention,
                 sentiment=heuristic_sentiment,
                 risk_score=risk_score,
-                negative_keywords=", ".join(matched),
+                risk_level=self._risk_level(heuristic_sentiment, risk_score),
+                risk_keywords=keywords,
+                negative_keywords=keywords,
             )
 
         try:
@@ -49,20 +52,37 @@ class SentimentAnalyzer:
             label = result.get("sentiment", heuristic_sentiment)
             if label not in self.VALID_LABELS:
                 label = heuristic_sentiment
+            final_risk_score = max(float(result.get("risk_score", 0.0)), risk_score)
+            keywords = ", ".join(sorted(set(matched + result.get("negative_keywords", []))))
             return replace(
                 mention,
                 sentiment=label,
-                risk_score=max(float(result.get("risk_score", 0.0)), risk_score),
-                negative_keywords=", ".join(sorted(set(matched + result.get("negative_keywords", [])))),
+                risk_score=final_risk_score,
+                risk_level=self._risk_level(label, final_risk_score),
+                risk_keywords=keywords,
+                negative_keywords=keywords,
             )
         except Exception:  # noqa: BLE001 - keep monitoring running if AI classification fails.
             LOGGER.exception("OpenAI sentiment classification failed for %s", mention.url)
+            keywords = ", ".join(matched)
             return replace(
                 mention,
                 sentiment=heuristic_sentiment,
                 risk_score=risk_score,
-                negative_keywords=", ".join(matched),
+                risk_level=self._risk_level(heuristic_sentiment, risk_score),
+                risk_keywords=keywords,
+                negative_keywords=keywords,
             )
+
+    @staticmethod
+    def _risk_level(sentiment: str, risk_score: float) -> str:
+        if sentiment == "negative" or risk_score >= 0.75:
+            return "high"
+        if sentiment == "risky" or risk_score >= 0.35:
+            return "medium"
+        if risk_score > 0:
+            return "low"
+        return "none"
 
     def _classify_with_openai(self, mention: Mention, matched_keywords: list[str]) -> dict:
         prompt = {
