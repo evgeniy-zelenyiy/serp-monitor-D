@@ -1,19 +1,21 @@
 # Python SERP Monitoring System
 
-A clean, scheduled Google SERP monitoring system for reputation management and SERM. It collects live Google organic results through Serper.dev when `SERPER_API_KEY` is available, falls back to deterministic demo SERP data when it is not, stores historical ranking data in SQLite, classifies sentiment and risk, captures screenshots with Playwright, sends Telegram alerts, exports a static GitHub Pages dashboard, and produces an entity map JSON.
+A clean, scheduled Google SERP monitoring system for reputation management and SERM. It collects live Google organic top-10 snapshots through Serper.dev when `SERPER_API_KEY` is available, falls back to deterministic demo SERP data when it is not, stores historical ranking data in SQLite, classifies sentiment and risk, renders SERP screenshots with Playwright, sends Telegram alerts for meaningful changes, exports a static GitHub Pages dashboard, and produces an entity map JSON.
 
 ## Features
 
-- Collect Google organic SERP mentions for configured brand and reputation queries with Serper.dev.
+- Collect Google organic SERP top-10 snapshots for configured brand and reputation queries with Serper.dev.
 - Run in demo mode without `SERPER_API_KEY` so CI still validates the full pipeline.
-- Save every mention and run to SQLite history with `first_seen`, `last_seen`, `source_type`, `risk_level`, and `risk_keywords`.
-- Detect new URLs and ranking changes by query and URL.
+- Save each workflow run and each query snapshot to SQLite with region, language, device, source type, and run datetime.
+- Preserve `first_seen` and `last_seen` by `(query, url)` and track `previous_rank`, `rank_delta`, and `disappeared_at`.
+- Mark URLs as `new`, `existing`, `changed`, or `disappeared` from historical snapshot data, not from dashboard export order.
 - Analyze sentiment as `positive`, `neutral`, `negative`, or `risky`.
 - Flag Portuguese negative keywords such as `golpe`, `fraude`, `denúncia`, `reclamação`, and `reclame aqui`.
-- Capture local screenshots of result URLs with Playwright.
-- Send Telegram reports and screenshots for risky/negative alerts.
+- Try to detect article publication dates from JSON-LD, OpenGraph/meta tags, `time` elements, and visible date patterns.
+- Render one local SERP top-10 screenshot per query/run with filenames such as `2026-05-14/dmytro-rukin-br-pt-top10.png`.
+- Send Telegram reports only for new URLs, rank changes, risky/negative mentions, and disappeared URLs.
 - Build an entity map JSON linking queries, URLs, domains, ranks, source type, and sentiment.
-- Publish a permanent static dashboard from the `/docs` folder with sortable tables, filters, search, entity/domain summary cards, and screenshots.
+- Publish a permanent static dashboard from the `/docs` folder with query tabs, snapshot views, filters, sorting, domain summaries, and screenshots.
 - Run automatically with GitHub Actions every 6 hours.
 
 ## Project structure
@@ -24,9 +26,9 @@ scripts/export_dashboard_data.py
 docs/
   index.html               # GitHub Pages dashboard
   styles.css               # Dark responsive dashboard styles
-  app.js                   # Filters, search, sorting, rendering
+  app.js                   # Tabs, filters, sorting, rendering
   data/results.json        # Auto-updated dashboard data
-  screenshots/             # Auto-copied dashboard screenshots
+  screenshots/             # Auto-copied dashboard SERP screenshots
 config.yaml
 requirements.txt
 .env.example
@@ -64,9 +66,11 @@ requirements.txt
 4. Edit `config.yaml`:
 
    - Add brand, executive, product, and risk queries under `monitoring.queries`.
-   - Set `country`, `language`, and `location_name` for the target market.
-   - Set `depth` for the number of organic results to collect per query.
-   - Tune screenshot limits and Telegram alert behavior.
+   - Set `country`, `language`, `location_name`, and `device` for the target market.
+   - Set `monitoring.depth` to `10` for top-10 organic snapshot tracking.
+   - Keep `monitoring.screenshot_mode` as `serp` to capture SERP snapshots instead of article pages.
+   - Keep `monitoring.track_disappeared` enabled to record URLs that leave the top 10.
+   - Keep `monitoring.extract_publication_date` enabled to enrich article rows when possible.
    - Set `monitoring.demo_results_per_query` for fallback mode.
    - Add more Portuguese negative keywords for your domain.
 
@@ -81,11 +85,11 @@ If `SERPER_API_KEY` is missing, the command runs in demo mode and generated repo
 
 Outputs are written under `data/` and `docs/` by default:
 
-- `data/serp_history.sqlite3` stores all mentions and ranking history.
-- `data/screenshots/` stores Playwright screenshots.
+- `data/serp_history.sqlite3` stores all runs and SERP snapshots.
+- `data/screenshots/YYYY-MM-DD/` stores rendered SERP top-10 screenshots.
 - `data/entity_map.json` stores a graph-friendly map of query/domain/URL relationships.
 - `docs/data/results.json` stores the dashboard-ready history export.
-- `docs/screenshots/` stores dashboard screenshot copies.
+- `docs/screenshots/YYYY-MM-DD/` stores dashboard screenshot copies.
 
 ## GitHub Pages Dashboard
 
@@ -100,6 +104,15 @@ To enable it:
 5. Save the settings.
 
 After GitHub Pages finishes publishing, use the Pages URL as the permanent dashboard link. The workflow updates `docs/data/results.json` and `docs/screenshots/` every 6 hours and on manual `workflow_dispatch` runs.
+
+The dashboard includes:
+
+- Query tabs for the current top-10 by configured query.
+- Global views for all mentions, new URLs, rank changes, and disappeared URLs.
+- Filters for query, date, status, sentiment, risk level, and domain.
+- Sorting by rank, first seen, last seen, sentiment, and risk level.
+- A screenshot gallery grouped by capture date and query.
+- Entity/domain summaries from the latest snapshots and `entity_map.json`.
 
 ## GitHub Actions
 
@@ -116,8 +129,12 @@ The workflow succeeds without these secrets by using demo SERP data, exporting d
 
 ## Notes
 
-- The monitor compares each `(query, url)` pair against the latest previous rank to detect new URLs and position movement.
-- `first_seen` is preserved from the earliest observation for each `(query, url)` pair; `last_seen` updates on every run where that mention appears.
+- Rank is always the organic position inside the Serper.dev organic results for that query: first result is `1`, second is `2`, and so on.
+- A URL is `new` only the first time the monitor sees that URL for the same query.
+- A URL is `changed` only when its rank differs from the previous snapshot for the same query.
+- A URL is `disappeared` when it existed in the previous top-10 for the query but is absent from the current top-10.
+- `first_seen` is the first time this monitor saw a URL in the SERP. It is not the article publication date.
+- `date_published` is best-effort metadata extracted from the article page and is shown as `unknown` when unavailable.
 - Demo mode keeps the full pipeline available and only activates when `SERPER_API_KEY` is missing.
 - If OpenAI classification is unavailable, the system still runs with the local Portuguese negative keyword heuristic.
-- Screenshot failures are logged but do not stop mention collection, dashboard export, or alerting.
+- Screenshot failures are logged but do not stop snapshot collection, dashboard export, or alerting.
