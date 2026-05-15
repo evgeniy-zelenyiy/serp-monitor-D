@@ -8,7 +8,7 @@ import logging
 import shutil
 import sqlite3
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -23,6 +23,9 @@ from app.database import SerpDatabase
 
 LOGGER = logging.getLogger(__name__)
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
+RECENT_CHANGE_LIMIT = 250
+RISKY_LIMIT = 250
+LATEST_STATUS_LIMIT = 500
 
 
 class DashboardExport:
@@ -44,28 +47,43 @@ class DashboardExport:
         self.screenshots_dir.mkdir(parents=True, exist_ok=True)
         self._ensure_database_schema()
 
-        rows = self._snapshot_rows()
-        latest_run_id = self._latest_run_id(rows)
-        latest = [self._row_to_item(row) for row in rows if row["run_id"] == latest_run_id and row["status"] != "disappeared"]
-        all_items = [self._row_to_item(row) for row in rows]
+        latest_run_id = self._latest_run_id()
+        latest_rows = self._latest_top10_rows(latest_run_id)
+        recent_change_rows = self._recent_change_rows()
+        risky_rows = self._risky_rows()
+        latest_status_rows = self._latest_status_rows()
+
+        latest = [self._row_to_item(row) for row in latest_rows]
+        recent_changes = [self._row_to_item(row) for row in recent_change_rows]
+        risky_mentions = [self._row_to_item(row) for row in risky_rows]
+        latest_statuses = [self._row_to_item(row) for row in latest_status_rows]
+        dashboard_items = self._unique_items([*latest, *recent_changes, *risky_mentions, *latest_statuses])
         entity_map = self._load_entity_map()
         payload = {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "project": self.config.get("project", {}).get("name", "SERP Monitor"),
             "latest_run_id": latest_run_id,
             "queries": sorted({item["query"] for item in latest}),
-            "summary": self._summary(all_items, latest_run_id),
+            "summary": self._summary(latest, recent_changes),
             "latest_top10": latest,
-            "mentions": all_items,
+            "mentions": dashboard_items,
+            "recent_changes": recent_changes,
+            "risky_mentions": risky_mentions,
+            "latest_statuses": latest_statuses,
             "views": {
-                "all": all_items,
-                "new_urls": [item for item in all_items if item["status"] == "new"],
-                "rank_changes": [item for item in all_items if item["status"] == "changed"],
-                "disappeared": [item for item in all_items if item["status"] == "disappeared"],
+                "all": latest,
+                "new": [item for item in recent_changes if item["status"] == "new"],
+                "changed": [item for item in recent_changes if item["status"] == "changed"],
+                "disappeared": [item for item in recent_changes if item["status"] == "disappeared"],
             },
-            "screenshots": self._screenshots(all_items),
+            "screenshots": self._screenshots(latest),
             "domains": self._domain_summary(latest, entity_map),
             "entity_map": entity_map,
+            "export_limits": {
+                "recent_changes": RECENT_CHANGE_LIMIT,
+                "risky_mentions": RISKY_LIMIT,
+                "latest_statuses": LATEST_STATUS_LIMIT,
+            },
         }
         self.results_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         LOGGER.info("Exported dashboard data to %s", self.results_path)
@@ -83,31 +101,90 @@ class DashboardExport:
         finally:
             database.close()
 
-    def _snapshot_rows(self) -> list[sqlite3.Row]:
-        if not self.database_path.exists():
-            LOGGER.warning("SQLite database does not exist yet: %s", self.database_path)
-            return []
+    def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.database_path)
         connection.row_factory = sqlite3.Row
-        try:
+        return connection
+
+    def _latest_run_id(self) -> str | None:
+        if not self.database_path.exists():
+            LOGGER.warning("SQLite database does not exist yet: %s", self.database_path)
+            return None
+        with self._connect() as connection:
+            row = connection.execute("SELECT run_id FROM runs ORDER BY run_datetime DESC LIMIT 1").fetchone()
+            return row["run_id"] if row else None
+
+    def _latest_top10_rows(self, latest_run_id: str | None) -> list[sqlite3.Row]:
+        if not latest_run_id:
+            return []
+        with self._connect() as connection:
             return connection.execute(
                 """
                 SELECT s.*, r.mode
                 FROM serp_snapshots s
                 LEFT JOIN runs r ON r.run_id = s.run_id
-                ORDER BY s.run_datetime DESC, s.query ASC, COALESCE(s.rank, 999) ASC, s.id DESC
-                """
+                WHERE s.run_id = ? AND s.status != 'disappeared'
+                ORDER BY s.query ASC, COALESCE(s.rank, 999) ASC, s.id DESC
+                """,
+                (latest_run_id,),
             ).fetchall()
-        finally:
-            connection.close()
 
-    @staticmethod
-    def _latest_run_id(rows: list[sqlite3.Row]) -> str | None:
-        return rows[0]["run_id"] if rows else None
+    def _recent_change_rows(self) -> list[sqlite3.Row]:
+        if not self.database_path.exists():
+            return []
+        with self._connect() as connection:
+            return connection.execute(
+                """
+                SELECT s.*, r.mode
+                FROM serp_snapshots s
+                LEFT JOIN runs r ON r.run_id = s.run_id
+                WHERE s.status IN ('new', 'changed', 'disappeared')
+                ORDER BY s.run_datetime DESC, s.query ASC, COALESCE(s.rank, 999) ASC, s.id DESC
+                LIMIT ?
+                """,
+                (RECENT_CHANGE_LIMIT,),
+            ).fetchall()
+
+    def _risky_rows(self) -> list[sqlite3.Row]:
+        if not self.database_path.exists():
+            return []
+        with self._connect() as connection:
+            return connection.execute(
+                """
+                SELECT s.*, r.mode
+                FROM serp_snapshots s
+                LEFT JOIN runs r ON r.run_id = s.run_id
+                WHERE s.sentiment IN ('risky', 'negative') OR s.risk_level IN ('medium', 'high')
+                ORDER BY s.run_datetime DESC, s.query ASC, COALESCE(s.rank, 999) ASC, s.id DESC
+                LIMIT ?
+                """,
+                (RISKY_LIMIT,),
+            ).fetchall()
+
+    def _latest_status_rows(self) -> list[sqlite3.Row]:
+        if not self.database_path.exists():
+            return []
+        with self._connect() as connection:
+            return connection.execute(
+                """
+                SELECT s.*, r.mode
+                FROM serp_snapshots s
+                LEFT JOIN runs r ON r.run_id = s.run_id
+                WHERE s.id IN (
+                    SELECT MAX(id)
+                    FROM serp_snapshots
+                    GROUP BY query, url
+                )
+                ORDER BY s.run_datetime DESC, s.query ASC, COALESCE(s.rank, 999) ASC
+                LIMIT ?
+                """,
+                (LATEST_STATUS_LIMIT,),
+            ).fetchall()
 
     def _row_to_item(self, row: sqlite3.Row) -> dict[str, Any]:
         screenshot = self._copy_screenshot(row["screenshot_path"])
         return {
+            "id": int(row["id"]),
             "run_id": row["run_id"],
             "run_datetime": row["run_datetime"],
             "query": row["query"],
@@ -130,10 +207,20 @@ class DashboardExport:
             "disappeared_at": row["disappeared_at"],
             "date_published": row["date_published"],
             "date_published_source": row["date_published_source"],
-            "date_published_confidence": row["date_published_confidence"],
             "source_type": row["source_type"] or "organic",
             "screenshot": screenshot,
         }
+
+    @staticmethod
+    def _unique_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        seen: set[int] = set()
+        unique = []
+        for item in items:
+            if item["id"] in seen:
+                continue
+            seen.add(item["id"])
+            unique.append(item)
+        return unique
 
     def _copy_screenshot(self, screenshot_path: str | None) -> str | None:
         if not screenshot_path:
@@ -163,9 +250,8 @@ class DashboardExport:
         return screenshots
 
     @staticmethod
-    def _summary(items: list[dict[str, Any]], latest_run_id: str | None) -> dict[str, int]:
-        latest = [item for item in items if item["run_id"] == latest_run_id and item["status"] != "disappeared"]
-        statuses = Counter(item["status"] for item in items if item["run_id"] == latest_run_id)
+    def _summary(latest: list[dict[str, Any]], recent_changes: list[dict[str, Any]]) -> dict[str, int]:
+        statuses = Counter(item["status"] for item in recent_changes)
         sentiments = Counter(item["sentiment"] for item in latest)
         return {
             "total_mentions": len(latest),
