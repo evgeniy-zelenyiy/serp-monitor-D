@@ -15,6 +15,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 body {
   margin: 0;
@@ -24,6 +25,51 @@ body {
   font-size: 14px;
   line-height: 1.45;
 }
+
+.login-screen {
+  align-items: center;
+  display: grid;
+  min-height: 100vh;
+  padding: 22px;
+}
+
+.login-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02)), var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 14px;
+  margin: 0 auto;
+  max-width: 380px;
+  padding: 24px;
+  width: 100%;
+}
+
+.login-card label {
+  color: var(--muted);
+  display: grid;
+  gap: 6px;
+}
+
+.login-card input,
+.login-card button,
+.pagination button {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  font: inherit;
+  min-height: 40px;
+  padding: 9px 11px;
+}
+
+.login-card input { background: #0d141b; }
+.login-card button,
+.pagination button { background: var(--accent); color: #06120f; cursor: pointer; font-weight: 750; }
+.login-card button:hover,
+.pagination button:hover:not(:disabled) { filter: brightness(1.05); }
+.pagination button:disabled { background: var(--panel-2); color: var(--muted); cursor: not-allowed; }
+.login-error { color: var(--red); min-height: 20px; }
 
 .topbar {
   align-items: center;
@@ -124,7 +170,7 @@ th button { cursor: pointer; }
   color: var(--muted);
   display: grid;
   gap: 5px;
-  min-width: 150px;
+  min-width: 170px;
 }
 
 .toolbar select,
@@ -144,6 +190,15 @@ a { color: var(--blue); text-decoration: none; word-break: break-word; }
 a:hover { text-decoration: underline; }
 .url-cell { max-width: 300px; }
 .title-cell, .query-cell { max-width: 240px; }
+
+.pagination {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin: 14px 0 0;
+}
 
 .badge {
   border-radius: 999px;
@@ -184,6 +239,8 @@ a:hover { text-decoration: underline; }
   main { padding: 18px 16px 34px; }
   .summary { grid-template-columns: 1fr 1fr; }
   h1 { font-size: 24px; }
+  .pagination { justify-content: stretch; }
+  .pagination button { flex: 1; }
 }
 
 @media (max-width: 420px) {
