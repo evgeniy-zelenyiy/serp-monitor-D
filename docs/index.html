@@ -37,6 +37,36 @@
           <article class="metric"><span>Positive / neutral</span><strong id="safeMentions">0</strong></article>
         </section>
 
+        <section class="insight-grid" aria-label="SERP volatility">
+          <article class="insight-card"><span>Biggest increases</span><div id="rankIncreases" class="mini-list">-</div></article>
+          <article class="insight-card"><span>Biggest drops</span><div id="rankDrops" class="mini-list">-</div></article>
+          <article class="insight-card"><span>Most volatile query</span><strong id="volatileQuery">-</strong></article>
+          <article class="insight-card"><span>New domains today</span><div id="newDomainsToday" class="mini-list">-</div></article>
+          <article class="insight-card"><span>Disappeared domains today</span><div id="disappearedDomainsToday" class="mini-list">-</div></article>
+        </section>
+
+        <section class="query-health-section" aria-label="Query health scores">
+          <div class="section-heading"><h2>Query Health</h2><p>Reputation score by current SERP state</p></div>
+          <div id="queryHealth" class="health-grid"></div>
+        </section>
+
+        <section class="chart-section" aria-label="Historical charts">
+          <div class="section-heading"><h2>Historical Charts</h2><p>Latest bounded trend export</p></div>
+          <div class="chart-grid">
+            <article class="chart-card"><h3>Visibility over time</h3><canvas id="visibilityChart" height="150"></canvas></article>
+            <article class="chart-card"><h3>Risky mentions over time</h3><canvas id="riskyChart" height="150"></canvas></article>
+            <article class="chart-card"><h3>New URLs over time</h3><canvas id="newUrlsChart" height="150"></canvas></article>
+            <article class="chart-card"><h3>Average rank over time</h3><canvas id="averageRankChart" height="150"></canvas></article>
+            <article class="chart-card wide"><h3>Domain appearance trends</h3><canvas id="domainTrendChart" height="180"></canvas></article>
+          </div>
+        </section>
+
+        <section class="export-bar" aria-label="Dashboard exports">
+          <button id="downloadCsv" type="button">Download CSV</button>
+          <button id="downloadJson" type="button">Download JSON</button>
+          <button id="downloadSummary" type="button">Download executive summary</button>
+        </section>
+
         <nav class="view-tabs" aria-label="Dashboard views">
           <button class="view active" data-view="all" type="button">All</button>
           <button class="view" data-view="new" type="button">New</button>
@@ -65,6 +95,8 @@
                 <th>Title</th>
                 <th>URL</th>
                 <th>Domain</th>
+                <th>Entity</th>
+                <th>Tags</th>
                 <th><button data-sort="sentiment" type="button">Sentiment</button></th>
                 <th><button data-sort="risk_level" type="button">Risk level</button></th>
                 <th>Risk keywords</th>
@@ -74,7 +106,7 @@
                 <th>Source</th>
               </tr>
             </thead>
-            <tbody id="mentionsBody"><tr><td colspan="15" class="empty">Loading dashboard data</td></tr></tbody>
+            <tbody id="mentionsBody"><tr><td colspan="17" class="empty">Loading dashboard data</td></tr></tbody>
           </table>
         </section>
 
@@ -94,6 +126,26 @@
           <div id="screenshots" class="gallery"></div>
         </section>
       </main>
+    </div>
+
+    <aside id="historyPanel" class="side-panel" hidden>
+      <button id="closeHistory" class="icon-close" type="button">×</button>
+      <h2>URL History</h2>
+      <div id="historyContent"></div>
+    </aside>
+
+    <div id="screenshotModal" class="modal" hidden>
+      <div class="modal-toolbar">
+        <button id="prevShot" type="button">Previous</button>
+        <button id="zoomOut" type="button">Zoom -</button>
+        <span id="zoomLevel">100%</span>
+        <button id="zoomIn" type="button">Zoom +</button>
+        <a id="openOriginal" href="#" target="_blank" rel="noopener noreferrer">Open PNG</a>
+        <button id="nextShot" type="button">Next</button>
+        <button id="closeModal" type="button">Close</button>
+      </div>
+      <figure class="modal-figure"><img id="modalImage" alt="SERP screenshot preview" /></figure>
+      <p id="modalCaption" class="modal-caption"></p>
     </div>
 
     <script src="app.js"></script>
