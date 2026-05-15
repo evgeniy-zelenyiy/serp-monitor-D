@@ -1,6 +1,6 @@
 # Python SERP Monitoring System
 
-A clean, scheduled Google SERP monitoring system for reputation management and SERM. It collects live Google organic top-10 snapshots through Serper.dev when `SERPER_API_KEY` is available, falls back to deterministic demo SERP data when it is not, stores historical ranking data in SQLite, classifies sentiment and risk, renders SERP screenshots with Playwright, sends Telegram alerts for meaningful changes, exports a static GitHub Pages dashboard, and produces an entity map JSON.
+A clean, scheduled Google SERP monitoring system for reputation management and SERM. It collects live Google organic top-10 snapshots through Serper.dev when `SERPER_API_KEY` is available, falls back to deterministic demo SERP data when it is not, stores full historical ranking data in SQLite, classifies sentiment and risk, renders SERP screenshots with Playwright, sends Telegram alerts for meaningful changes, exports a lightweight static GitHub Pages dashboard, and produces an entity map JSON.
 
 ## Features
 
@@ -15,7 +15,7 @@ A clean, scheduled Google SERP monitoring system for reputation management and S
 - Render one local SERP top-10 screenshot per query/run with filenames such as `2026-05-14/dmytro-rukin-br-pt-top10.png`.
 - Send Telegram reports only for new URLs, rank changes, risky/negative mentions, and disappeared URLs.
 - Build an entity map JSON linking queries, URLs, domains, ranks, source type, and sentiment.
-- Publish a permanent static dashboard from the `/docs` folder with query tabs, snapshot views, filters, sorting, domain summaries, and screenshots.
+- Publish a permanent static dashboard from the `/docs` folder with client-side auth, query tabs, snapshot views, filters, pagination, domain summaries, and screenshots.
 - Run automatically with GitHub Actions every 6 hours.
 
 ## Project structure
@@ -26,8 +26,8 @@ scripts/export_dashboard_data.py
 docs/
   index.html               # GitHub Pages dashboard
   styles.css               # Dark responsive dashboard styles
-  app.js                   # Tabs, filters, sorting, rendering
-  data/results.json        # Auto-updated dashboard data
+  app.js                   # Auth, tabs, filters, pagination, sorting, rendering
+  data/results.json        # Auto-updated lightweight dashboard data
   screenshots/             # Auto-copied dashboard SERP screenshots
 config.yaml
 requirements.txt
@@ -88,7 +88,7 @@ Outputs are written under `data/` and `docs/` by default:
 - `data/serp_history.sqlite3` stores all runs and SERP snapshots.
 - `data/screenshots/YYYY-MM-DD/` stores rendered SERP top-10 screenshots.
 - `data/entity_map.json` stores a graph-friendly map of query/domain/URL relationships.
-- `docs/data/results.json` stores the dashboard-ready history export.
+- `docs/data/results.json` stores the lightweight dashboard export: current top-10, recent changes, risky mentions, and latest statuses.
 - `docs/screenshots/YYYY-MM-DD/` stores dashboard screenshot copies.
 
 ## GitHub Pages Dashboard
@@ -105,11 +105,14 @@ To enable it:
 
 After GitHub Pages finishes publishing, use the Pages URL as the permanent dashboard link. The workflow updates `docs/data/results.json` and `docs/screenshots/` every 6 hours and on manual `workflow_dispatch` runs.
 
+Dashboard access uses lightweight client-side protection. The login is `yevhen`; only the SHA-256 password hash is stored in the static JavaScript, and unlock state is kept in `sessionStorage`.
+
 The dashboard includes:
 
 - Query tabs for the current top-10 by configured query.
-- Global views for all mentions, new URLs, rank changes, and disappeared URLs.
-- Filters for query, date, status, sentiment, risk level, and domain.
+- Global views for all current rows, new URLs, changed ranks, and disappeared URLs.
+- Filters for query, status, sentiment, and domain.
+- Pagination with 50 rows per page by default.
 - Sorting by rank, first seen, last seen, sentiment, and risk level.
 - A screenshot gallery grouped by capture date and query.
 - Entity/domain summaries from the latest snapshots and `entity_map.json`.
@@ -135,6 +138,7 @@ The workflow succeeds without these secrets by using demo SERP data, exporting d
 - A URL is `disappeared` when it existed in the previous top-10 for the query but is absent from the current top-10.
 - `first_seen` is the first time this monitor saw a URL in the SERP. It is not the article publication date.
 - `date_published` is best-effort metadata extracted from the article page and is shown as `unknown` when unavailable.
+- SQLite keeps full history; the dashboard JSON intentionally stays bounded so GitHub Pages remains fast.
 - Demo mode keeps the full pipeline available and only activates when `SERPER_API_KEY` is missing.
 - If OpenAI classification is unavailable, the system still runs with the local Portuguese negative keyword heuristic.
 - Screenshot failures are logged but do not stop snapshot collection, dashboard export, or alerting.
