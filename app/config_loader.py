@@ -68,6 +68,12 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "timeout_ms": 30000,
         "full_page": True,
     },
+    "domain_tags": {
+        "owned_domains": [],
+        "trusted_domains": ["linkedin.com", "crunchbase.com", "medium.com"],
+        "risky_domains": ["rumafia.io", "rumafia.news", "rozsliduvach.info"],
+        "ignored_domains": [],
+    },
     "telegram": {
         "enabled": True,
         "alert_on_sentiments": ["negative", "risky"],
