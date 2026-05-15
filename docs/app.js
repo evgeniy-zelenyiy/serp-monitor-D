@@ -11,10 +11,13 @@ const state = {
   sortDirection: "asc",
   page: 1,
   pageSize: 50,
+  screenshotIndex: 0,
+  screenshotZoom: 1,
 };
 
 const sentimentOrder = { negative: 0, risky: 1, neutral: 2, positive: 3 };
 const riskOrder = { high: 0, medium: 1, low: 2, none: 3 };
+const chartColors = ["#4fbf9f", "#6bb7ff", "#f2bf63", "#ff7878", "#63d28f"];
 
 const body = document.querySelector("#mentionsBody");
 const screenshots = document.querySelector("#screenshots");
@@ -73,10 +76,13 @@ function badge(value) {
   return `<span class="badge ${safe}">${safe}</span>`;
 }
 
+function tagBadges(tags) {
+  if (!tags || !tags.length) return "-";
+  return tags.map((tag) => `<span class="tag ${escapeHtml(tag)}">${escapeHtml(tag)}</span>`).join(" ");
+}
+
 function sourceRows() {
-  if (state.queryTab) {
-    return (state.payload.latest_top10 || []).filter((item) => item.query === state.queryTab);
-  }
+  if (state.queryTab) return (state.payload.latest_top10 || []).filter((item) => item.query === state.queryTab);
   if (state.view === "all") return state.payload.latest_top10 || [];
   return (state.payload.views && state.payload.views[state.view]) || [];
 }
@@ -86,7 +92,7 @@ function filteredRows() {
     return (!state.filters.query || item.query === state.filters.query)
       && (!state.filters.status || item.status === state.filters.status)
       && (!state.filters.sentiment || item.sentiment === state.filters.sentiment)
-      && (!state.filters.domain || item.domain === state.filters.domain);
+      && (!state.filters.domain || item.domain_entity === state.filters.domain || item.parent_domain === state.filters.domain || item.domain === state.filters.domain);
   });
 }
 
@@ -122,6 +128,43 @@ function renderSummary(summary) {
   document.querySelector("#safeMentions").textContent = (summary.positive_mentions || 0) + (summary.neutral_mentions || 0);
 }
 
+function renderVolatility() {
+  const volatility = state.payload.volatility || {};
+  document.querySelector("#rankIncreases").innerHTML = rankList(volatility.biggest_rank_increases || []);
+  document.querySelector("#rankDrops").innerHTML = rankList(volatility.biggest_rank_drops || []);
+  const volatile = volatility.most_volatile_query || {};
+  document.querySelector("#volatileQuery").textContent = volatile.query ? `${volatile.query} (${volatile.movement})` : "-";
+  document.querySelector("#newDomainsToday").innerHTML = compactList(volatility.new_domains_today || []);
+  document.querySelector("#disappearedDomainsToday").innerHTML = compactList(volatility.disappeared_domains_today || []);
+}
+
+function rankList(rows) {
+  if (!rows.length) return "-";
+  return rows.slice(0, 4).map((item) => `<button class="text-link" data-url="${escapeHtml(item.url)}" type="button">${escapeHtml(item.domain_entity || item.domain)} ${item.rank_delta > 0 ? "+" : ""}${escapeHtml(item.rank_delta || 0)}</button>`).join("");
+}
+
+function compactList(values) {
+  if (!values.length) return "-";
+  return values.slice(0, 6).map((value) => `<span>${escapeHtml(value)}</span>`).join("");
+}
+
+function renderQueryHealth() {
+  const root = document.querySelector("#queryHealth");
+  const health = state.payload.query_health || {};
+  const entries = Object.entries(health);
+  if (!entries.length) {
+    root.innerHTML = '<p class="empty">Query health scores will appear after snapshot export.</p>';
+    return;
+  }
+  root.innerHTML = entries.map(([query, item]) => `
+    <article class="health-card">
+      <span>${escapeHtml(query)}</span>
+      <strong>${escapeHtml(item.score)}/100</strong>
+      <em class="trend ${escapeHtml(item.trend)}">${escapeHtml(item.trend)}</em>
+    </article>
+  `).join("");
+}
+
 function renderTable() {
   const rows = sortedRows(filteredRows());
   const totalPages = Math.max(1, Math.ceil(rows.length / state.pageSize));
@@ -129,7 +172,7 @@ function renderTable() {
   const start = (state.page - 1) * state.pageSize;
   const pageRows = rows.slice(start, start + state.pageSize);
   if (!pageRows.length) {
-    body.innerHTML = '<tr><td colspan="15" class="empty">No rows match this view</td></tr>';
+    body.innerHTML = '<tr><td colspan="17" class="empty">No rows match this view</td></tr>';
   } else {
     body.innerHTML = pageRows.map((item) => `
       <tr>
@@ -139,8 +182,10 @@ function renderTable() {
         <td>${item.rank_delta === null || item.rank_delta === undefined ? "-" : escapeHtml(item.rank_delta)}</td>
         <td>${badge(item.status)}</td>
         <td class="title-cell">${escapeHtml(item.title)}</td>
-        <td class="url-cell"><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.url)}</a></td>
+        <td class="url-cell"><button class="url-history" data-url="${escapeHtml(item.url)}" type="button">${escapeHtml(item.url)}</button></td>
         <td>${escapeHtml(item.domain)}</td>
+        <td>${escapeHtml(item.domain_entity || item.parent_domain || "-")}</td>
+        <td>${tagBadges(item.domain_tags)}</td>
         <td>${badge(item.sentiment || "neutral")}</td>
         <td>${badge(item.risk_level || "none")}</td>
         <td>${escapeHtml(item.risk_keywords || "-")}</td>
@@ -179,7 +224,7 @@ function renderQueryTabs(queries) {
 
 function populateFilters(rows) {
   fillSelect("#queryFilter", [...new Set(rows.map((item) => item.query))].sort(), "All queries");
-  fillSelect("#domainFilter", [...new Set(rows.map((item) => item.domain).filter(Boolean))].sort(), "All domains");
+  fillSelect("#domainFilter", [...new Set(rows.flatMap((item) => [item.domain_entity, item.parent_domain, item.domain]).filter(Boolean))].sort(), "All domains");
 }
 
 function fillSelect(selector, values, label) {
@@ -189,7 +234,7 @@ function fillSelect(selector, values, label) {
 
 function renderDomains() {
   const domainRows = state.payload.domains || [];
-  document.querySelector("#domainCount").textContent = `${domainRows.length} domains`;
+  document.querySelector("#domainCount").textContent = `${domainRows.length} entities`;
   if (!domainRows.length) {
     domains.innerHTML = '<p class="empty">Domain summary will appear after the first export.</p>';
     return;
@@ -197,6 +242,8 @@ function renderDomains() {
   domains.innerHTML = domainRows.map((domain) => `
     <article class="domain-card">
       <h3>${escapeHtml(domain.domain)}</h3>
+      <p>${escapeHtml((domain.raw_domains || []).join(", "))}</p>
+      <div>${tagBadges(domain.tags)}</div>
       <div class="domain-stats">
         <span>Total</span><strong>${escapeHtml(domain.total)}</strong>
         <span>Best rank</span><strong>${escapeHtml(domain.best_rank || "-")}</strong>
@@ -216,12 +263,181 @@ function renderGallery() {
     screenshots.innerHTML = '<p class="empty">No SERP screenshots have been captured yet.</p>';
     return;
   }
-  screenshots.innerHTML = shots.map((shot) => `
-    <figure class="capture">
-      <a href="${escapeHtml(shot.path)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(shot.path)}" alt="SERP screenshot for ${escapeHtml(shot.query)}" loading="lazy" /></a>
+  screenshots.innerHTML = shots.map((shot, index) => `
+    <figure class="capture" data-shot-index="${index}">
+      <img src="${escapeHtml(shot.path)}" alt="SERP screenshot for ${escapeHtml(shot.query)}" loading="lazy" />
       <figcaption><strong>${escapeHtml(shot.date)}</strong><br />${escapeHtml(shot.query)}</figcaption>
     </figure>
   `).join("");
+}
+
+function openHistory(url) {
+  const data = (state.payload.url_histories || {})[url];
+  const panel = document.querySelector("#historyPanel");
+  const root = document.querySelector("#historyContent");
+  if (!data) {
+    root.innerHTML = `<p class="empty">No exported history for ${escapeHtml(url)}</p>`;
+  } else {
+    root.innerHTML = `
+      <a class="history-url" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>
+      <dl class="history-meta">
+        <dt>First seen</dt><dd>${formatDate(data.first_seen)}</dd>
+        <dt>Last seen</dt><dd>${formatDate(data.last_seen)}</dd>
+        <dt>Disappeared</dt><dd>${formatDate(data.disappeared_at)}</dd>
+        <dt>Queries</dt><dd>${escapeHtml((data.queries || []).join(", "))}</dd>
+      </dl>
+      <canvas id="urlRankChart" height="150"></canvas>
+      <h3>Rank history</h3>
+      <div class="history-table">${historyRows(data.history || [])}</div>
+      <h3>Risk and sentiment changes</h3>
+      <div class="history-table">${sentimentRows(data.sentiment_changes || [])}</div>
+    `;
+    drawLineChart("urlRankChart", (data.rank_series || []).map((item) => item.date), (data.rank_series || []).map((item) => item.rank ? 11 - item.rank : 0), "Rank visibility");
+  }
+  panel.hidden = false;
+}
+
+function historyRows(rows) {
+  if (!rows.length) return '<p class="empty">No rows</p>';
+  return `<table><tbody>${rows.map((row) => `<tr><td>${formatDate(row.run_datetime)}</td><td>${escapeHtml(row.query)}</td><td>#${escapeHtml(row.current_rank || "-")}</td><td>${badge(row.status)}</td></tr>`).join("")}</tbody></table>`;
+}
+
+function sentimentRows(rows) {
+  if (!rows.length) return '<p class="empty">No rows</p>';
+  return `<table><tbody>${rows.map((row) => `<tr><td>${escapeHtml(row.date)}</td><td>${badge(row.sentiment)}</td><td>${badge(row.risk_level)}</td></tr>`).join("")}</tbody></table>`;
+}
+
+function openScreenshot(index) {
+  const shots = state.payload.screenshots || [];
+  if (!shots.length) return;
+  state.screenshotIndex = (index + shots.length) % shots.length;
+  state.screenshotZoom = 1;
+  updateScreenshotModal();
+  document.querySelector("#screenshotModal").hidden = false;
+}
+
+function updateScreenshotModal() {
+  const shot = (state.payload.screenshots || [])[state.screenshotIndex];
+  if (!shot) return;
+  const image = document.querySelector("#modalImage");
+  image.src = shot.path;
+  image.style.transform = `scale(${state.screenshotZoom})`;
+  document.querySelector("#zoomLevel").textContent = `${Math.round(state.screenshotZoom * 100)}%`;
+  document.querySelector("#openOriginal").href = shot.path;
+  document.querySelector("#modalCaption").textContent = `${shot.date} - ${shot.query}`;
+}
+
+function renderCharts() {
+  const charts = state.payload.charts || {};
+  const labels = charts.labels || [];
+  drawLineChart("visibilityChart", labels, charts.visibility || [], "Visibility");
+  drawLineChart("riskyChart", labels, charts.risky_mentions || [], "Risky");
+  drawLineChart("newUrlsChart", labels, charts.new_urls || [], "New URLs");
+  drawLineChart("averageRankChart", labels, charts.average_rank || [], "Average rank", true);
+  drawMultiLineChart("domainTrendChart", labels, charts.domain_trends || {});
+}
+
+function drawLineChart(id, labels, values, label, invert = false) {
+  const canvas = document.querySelector(`#${id}`);
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  prepareCanvas(canvas, ctx);
+  if (!values.length) return drawEmptyChart(ctx, canvas);
+  const points = toPoints(canvas, values, invert);
+  drawAxes(ctx, canvas);
+  drawPath(ctx, points, chartColors[0]);
+  drawChartLabel(ctx, label, labels);
+}
+
+function drawMultiLineChart(id, labels, series) {
+  const canvas = document.querySelector(`#${id}`);
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  prepareCanvas(canvas, ctx);
+  const entries = Object.entries(series);
+  if (!entries.length) return drawEmptyChart(ctx, canvas);
+  const maxValue = Math.max(1, ...entries.flatMap(([, values]) => values));
+  drawAxes(ctx, canvas);
+  entries.forEach(([name, values], index) => {
+    const points = values.map((value, i) => {
+      const x = 36 + (i * (canvas.width - 60)) / Math.max(1, values.length - 1);
+      const y = canvas.height - 28 - ((value / maxValue) * (canvas.height - 56));
+      return { x, y };
+    });
+    drawPath(ctx, points, chartColors[index % chartColors.length]);
+    ctx.fillStyle = chartColors[index % chartColors.length];
+    ctx.fillText(name, 42, 18 + index * 14);
+  });
+  drawChartLabel(ctx, "Domain trends", labels);
+}
+
+function prepareCanvas(canvas, ctx) {
+  const ratio = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.max(320, Math.floor(rect.width * ratio));
+  canvas.height = Math.max(150, Math.floor(Number(canvas.getAttribute("height") || 150) * ratio));
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.font = "12px sans-serif";
+}
+
+function toPoints(canvas, values, invert) {
+  const maxValue = Math.max(1, ...values.filter((value) => value !== null && value !== undefined));
+  return values.map((value, index) => {
+    const x = 36 + (index * (canvas.width - 60)) / Math.max(1, values.length - 1);
+    const normalized = invert ? 1 - (Number(value || 0) / maxValue) : Number(value || 0) / maxValue;
+    const y = canvas.height - 28 - (normalized * (canvas.height - 56));
+    return { x, y };
+  });
+}
+
+function drawAxes(ctx, canvas) {
+  ctx.strokeStyle = "#263542";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(34, 12);
+  ctx.lineTo(34, canvas.height - 28);
+  ctx.lineTo(canvas.width - 18, canvas.height - 28);
+  ctx.stroke();
+}
+
+function drawPath(ctx, points, color) {
+  if (!points.length) return;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  points.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
+  ctx.stroke();
+  ctx.fillStyle = color;
+  points.forEach((point) => ctx.fillRect(point.x - 2, point.y - 2, 4, 4));
+}
+
+function drawChartLabel(ctx, label, labels) {
+  ctx.fillStyle = "#93a3ad";
+  ctx.fillText(label, 42, 18);
+  if (labels.length) ctx.fillText(`${labels[0]} -> ${labels[labels.length - 1]}`, 42, 34);
+}
+
+function drawEmptyChart(ctx, canvas) {
+  ctx.fillStyle = "#93a3ad";
+  ctx.fillText("No chart data yet", 40, canvas.height / 2);
+}
+
+function downloadFile(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadCsv() {
+  const rows = state.payload.mentions || [];
+  const headers = ["query", "rank", "previous_rank", "rank_delta", "status", "title", "url", "domain", "domain_entity", "tags", "sentiment", "risk_level", "first_seen", "last_seen", "date_published"];
+  const csv = [headers.join(","), ...rows.map((row) => headers.map((key) => `"${String(key === "tags" ? (row.domain_tags || []).join("|") : row[key] ?? "").replaceAll('"', '""')}"`).join(","))].join("\n");
+  downloadFile("serp-dashboard.csv", csv, "text/csv");
 }
 
 function bindEvents() {
@@ -252,14 +468,31 @@ function bindEvents() {
       resetAndRender();
     });
   });
-  document.querySelector("#prevPage").addEventListener("click", () => {
-    state.page = Math.max(1, state.page - 1);
-    renderTable();
+  document.querySelector("#prevPage").addEventListener("click", () => { state.page = Math.max(1, state.page - 1); renderTable(); });
+  document.querySelector("#nextPage").addEventListener("click", () => { state.page += 1; renderTable(); });
+  document.addEventListener("click", (event) => {
+    const historyButton = event.target.closest(".url-history, .text-link");
+    if (historyButton?.dataset.url) openHistory(historyButton.dataset.url);
+    const capture = event.target.closest(".capture");
+    if (capture?.dataset.shotIndex) openScreenshot(Number(capture.dataset.shotIndex));
   });
-  document.querySelector("#nextPage").addEventListener("click", () => {
-    state.page += 1;
-    renderTable();
+  document.querySelector("#closeHistory").addEventListener("click", () => { document.querySelector("#historyPanel").hidden = true; });
+  document.querySelector("#closeModal").addEventListener("click", () => { document.querySelector("#screenshotModal").hidden = true; });
+  document.querySelector("#prevShot").addEventListener("click", () => openScreenshot(state.screenshotIndex - 1));
+  document.querySelector("#nextShot").addEventListener("click", () => openScreenshot(state.screenshotIndex + 1));
+  document.querySelector("#zoomIn").addEventListener("click", () => { state.screenshotZoom = Math.min(3, state.screenshotZoom + 0.25); updateScreenshotModal(); });
+  document.querySelector("#zoomOut").addEventListener("click", () => { state.screenshotZoom = Math.max(0.5, state.screenshotZoom - 0.25); updateScreenshotModal(); });
+  document.addEventListener("keydown", (event) => {
+    if (document.querySelector("#screenshotModal").hidden) return;
+    if (event.key === "Escape") document.querySelector("#screenshotModal").hidden = true;
+    if (event.key === "ArrowLeft") openScreenshot(state.screenshotIndex - 1);
+    if (event.key === "ArrowRight") openScreenshot(state.screenshotIndex + 1);
+    if (event.key === "+" || event.key === "=") { state.screenshotZoom = Math.min(3, state.screenshotZoom + 0.25); updateScreenshotModal(); }
+    if (event.key === "-") { state.screenshotZoom = Math.max(0.5, state.screenshotZoom - 0.25); updateScreenshotModal(); }
   });
+  document.querySelector("#downloadCsv").addEventListener("click", downloadCsv);
+  document.querySelector("#downloadJson").addEventListener("click", () => downloadFile("serp-dashboard.json", JSON.stringify(state.payload, null, 2), "application/json"));
+  document.querySelector("#downloadSummary").addEventListener("click", () => downloadFile("serp-executive-summary.md", state.payload.executive_summary_markdown || "", "text/markdown"));
 }
 
 async function loadDashboard() {
@@ -270,13 +503,16 @@ async function loadDashboard() {
     document.querySelector("#projectName").textContent = state.payload.project || "SERP Snapshot Dashboard";
     document.querySelector("#generatedAt").textContent = formatDate(state.payload.generated_at);
     renderSummary(state.payload.summary || {});
+    renderVolatility();
+    renderQueryHealth();
     populateFilters(state.payload.mentions || state.payload.latest_top10 || []);
     renderQueryTabs(state.payload.queries || []);
     renderTable();
     renderDomains();
     renderGallery();
+    renderCharts();
   } catch (error) {
-    body.innerHTML = `<tr><td colspan="15" class="empty">Dashboard data is not available yet: ${escapeHtml(error.message)}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="17" class="empty">Dashboard data is not available yet: ${escapeHtml(error.message)}</td></tr>`;
   }
 }
 
