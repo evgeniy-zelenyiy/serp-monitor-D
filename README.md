@@ -15,7 +15,7 @@ A clean, scheduled Google SERP monitoring system for reputation management and S
 - Render one local SERP top-10 screenshot per query/run with filenames such as `2026-05-14/dmytro-rukin-br-pt-top10.png`.
 - Send Telegram reports only for new URLs, rank changes, risky/negative mentions, and disappeared URLs.
 - Build an entity map JSON linking queries, URLs, domains, ranks, source type, and sentiment.
-- Publish a permanent static dashboard from the `/docs` folder with client-side auth, query tabs, snapshot views, filters, pagination, domain summaries, and screenshots.
+- Publish a permanent static dashboard from the `/docs` folder with client-side auth, query tabs, snapshot views, filters, pagination, domain summaries, screenshots, URL history, charts, and exports.
 - Run automatically with GitHub Actions every 6 hours.
 
 ## Project structure
@@ -26,7 +26,7 @@ scripts/export_dashboard_data.py
 docs/
   index.html               # GitHub Pages dashboard
   styles.css               # Dark responsive dashboard styles
-  app.js                   # Auth, tabs, filters, pagination, sorting, rendering
+  app.js                   # Auth, tabs, filters, pagination, charts, modals, exports
   data/results.json        # Auto-updated lightweight dashboard data
   screenshots/             # Auto-copied dashboard SERP screenshots
 config.yaml
@@ -73,6 +73,7 @@ requirements.txt
    - Keep `monitoring.extract_publication_date` enabled to enrich article rows when possible.
    - Set `monitoring.demo_results_per_query` for fallback mode.
    - Add more Portuguese negative keywords for your domain.
+   - Use `domain_tags.owned_domains`, `trusted_domains`, `risky_domains`, and `ignored_domains` to label dashboard entities.
 
 ## Running locally
 
@@ -88,7 +89,7 @@ Outputs are written under `data/` and `docs/` by default:
 - `data/serp_history.sqlite3` stores all runs and SERP snapshots.
 - `data/screenshots/YYYY-MM-DD/` stores rendered SERP top-10 screenshots.
 - `data/entity_map.json` stores a graph-friendly map of query/domain/URL relationships.
-- `docs/data/results.json` stores the lightweight dashboard export: current top-10, recent changes, risky mentions, and latest statuses.
+- `docs/data/results.json` stores the lightweight dashboard export: current top-10, recent changes, risky mentions, latest statuses, URL histories for visible URLs, chart series, volatility, and query health.
 - `docs/screenshots/YYYY-MM-DD/` stores dashboard screenshot copies.
 
 ## GitHub Pages Dashboard
@@ -111,11 +112,15 @@ The dashboard includes:
 
 - Query tabs for the current top-10 by configured query.
 - Global views for all current rows, new URLs, changed ranks, and disappeared URLs.
-- Filters for query, status, sentiment, and domain.
+- Filters for query, status, sentiment, and domain/entity.
 - Pagination with 50 rows per page by default.
 - Sorting by rank, first seen, last seen, sentiment, and risk level.
-- A screenshot gallery grouped by capture date and query.
-- Entity/domain summaries from the latest snapshots and `entity_map.json`.
+- Fullscreen screenshot preview with zoom, keyboard navigation, and original PNG links.
+- Clickable URL history panels with rank history, first/last seen, disappeared date, query coverage, and risk/sentiment changes.
+- SERP volatility cards for biggest increases, biggest drops, most volatile query, new domains today, and disappeared domains today.
+- Lightweight canvas charts for visibility, risky mentions, new URLs, average rank, and domain trends.
+- Entity/domain summaries with parent-domain grouping and domain tags.
+- CSV, JSON, and executive-summary Markdown downloads.
 
 ## GitHub Actions
 
