@@ -341,10 +341,10 @@ function drawLineChart(id, labels, values, label, invert = false) {
   const canvas = document.querySelector(`#${id}`);
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
-  prepareCanvas(canvas, ctx);
-  if (!values.length) return drawEmptyChart(ctx, canvas);
-  const points = toPoints(canvas, values, invert);
-  drawAxes(ctx, canvas);
+  const size = prepareCanvas(canvas, ctx);
+  if (!values.length) return drawEmptyChart(ctx, size);
+  const points = toPoints(size, values, invert);
+  drawAxes(ctx, size);
   drawPath(ctx, points, chartColors[0]);
   drawChartLabel(ctx, label, labels);
 }
@@ -353,15 +353,15 @@ function drawMultiLineChart(id, labels, series) {
   const canvas = document.querySelector(`#${id}`);
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
-  prepareCanvas(canvas, ctx);
+  const size = prepareCanvas(canvas, ctx);
   const entries = Object.entries(series);
-  if (!entries.length) return drawEmptyChart(ctx, canvas);
+  if (!entries.length) return drawEmptyChart(ctx, size);
   const maxValue = Math.max(1, ...entries.flatMap(([, values]) => values));
-  drawAxes(ctx, canvas);
+  drawAxes(ctx, size);
   entries.forEach(([name, values], index) => {
     const points = values.map((value, i) => {
-      const x = 36 + (i * (canvas.width - 60)) / Math.max(1, values.length - 1);
-      const y = canvas.height - 28 - ((value / maxValue) * (canvas.height - 56));
+      const x = 36 + (i * (size.width - 60)) / Math.max(1, values.length - 1);
+      const y = size.height - 28 - ((value / maxValue) * (size.height - 56));
       return { x, y };
     });
     drawPath(ctx, points, chartColors[index % chartColors.length]);
@@ -374,30 +374,33 @@ function drawMultiLineChart(id, labels, series) {
 function prepareCanvas(canvas, ctx) {
   const ratio = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
-  canvas.width = Math.max(320, Math.floor(rect.width * ratio));
-  canvas.height = Math.max(150, Math.floor(Number(canvas.getAttribute("height") || 150) * ratio));
+  const width = Math.max(320, Math.floor(rect.width));
+  const height = Math.max(150, Math.floor(Number(canvas.getAttribute("height") || 150)));
+  canvas.width = width * ratio;
+  canvas.height = height * ratio;
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, width, height);
   ctx.font = "12px sans-serif";
+  return { width, height };
 }
 
-function toPoints(canvas, values, invert) {
+function toPoints(size, values, invert) {
   const maxValue = Math.max(1, ...values.filter((value) => value !== null && value !== undefined));
   return values.map((value, index) => {
-    const x = 36 + (index * (canvas.width - 60)) / Math.max(1, values.length - 1);
+    const x = 36 + (index * (size.width - 60)) / Math.max(1, values.length - 1);
     const normalized = invert ? 1 - (Number(value || 0) / maxValue) : Number(value || 0) / maxValue;
-    const y = canvas.height - 28 - (normalized * (canvas.height - 56));
+    const y = size.height - 28 - (normalized * (size.height - 56));
     return { x, y };
   });
 }
 
-function drawAxes(ctx, canvas) {
+function drawAxes(ctx, size) {
   ctx.strokeStyle = "#263542";
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(34, 12);
-  ctx.lineTo(34, canvas.height - 28);
-  ctx.lineTo(canvas.width - 18, canvas.height - 28);
+  ctx.lineTo(34, size.height - 28);
+  ctx.lineTo(size.width - 18, size.height - 28);
   ctx.stroke();
 }
 
@@ -410,17 +413,16 @@ function drawPath(ctx, points, color) {
   ctx.stroke();
   ctx.fillStyle = color;
   points.forEach((point) => ctx.fillRect(point.x - 2, point.y - 2, 4, 4));
-}
-
+}\n
 function drawChartLabel(ctx, label, labels) {
   ctx.fillStyle = "#93a3ad";
   ctx.fillText(label, 42, 18);
   if (labels.length) ctx.fillText(`${labels[0]} -> ${labels[labels.length - 1]}`, 42, 34);
 }
 
-function drawEmptyChart(ctx, canvas) {
+function drawEmptyChart(ctx, size) {
   ctx.fillStyle = "#93a3ad";
-  ctx.fillText("No chart data yet", 40, canvas.height / 2);
+  ctx.fillText("No chart data yet", 40, size.height / 2);
 }
 
 function downloadFile(filename, content, type) {
