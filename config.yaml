@@ -73,6 +73,18 @@ screenshots:
   timeout_ms: 30000
   full_page: true
 
+domain_tags:
+  owned_domains: []
+  trusted_domains:
+    - "linkedin.com"
+    - "crunchbase.com"
+    - "medium.com"
+  risky_domains:
+    - "rumafia.io"
+    - "rumafia.news"
+    - "rozsliduvach.info"
+  ignored_domains: []
+
 telegram:
   enabled: true
   alert_on_sentiments:
