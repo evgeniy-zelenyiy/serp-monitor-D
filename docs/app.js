@@ -1,10 +1,16 @@
+const AUTH_LOGIN = "yevhen";
+const PASSWORD_HASH = "e8b724faa5749614b7bfb6e176b2ccaace349368a05924a6fbc6c2094bbb04c9";
+const AUTH_KEY = "serp_dashboard_unlocked";
+
 const state = {
   payload: {},
   view: "all",
   queryTab: "",
-  filters: { query: "", date: "", status: "", sentiment: "", risk: "", domain: "" },
+  filters: { query: "", status: "", sentiment: "", domain: "" },
   sortKey: "current_rank",
   sortDirection: "asc",
+  page: 1,
+  pageSize: 50,
 };
 
 const sentimentOrder = { negative: 0, risky: 1, neutral: 2, positive: 3 };
@@ -23,21 +29,43 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+async function sha256(value) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function showDashboard() {
+  document.querySelector("#loginScreen").hidden = true;
+  document.querySelector("#dashboard").hidden = false;
+  bindEvents();
+  loadDashboard();
+}
+
+function bindAuth() {
+  if (sessionStorage.getItem(AUTH_KEY) === "true") {
+    showDashboard();
+    return;
+  }
+  document.querySelector("#loginForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const login = document.querySelector("#loginInput").value.trim();
+    const password = document.querySelector("#passwordInput").value;
+    const error = document.querySelector("#loginError");
+    if (login === AUTH_LOGIN && await sha256(password) === PASSWORD_HASH) {
+      sessionStorage.setItem(AUTH_KEY, "true");
+      showDashboard();
+      return;
+    }
+    error.textContent = "Invalid login or password.";
+  });
+}
+
 function formatDate(value) {
   if (!value) return "unknown";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatShortDate(value) {
-  return value ? String(value).slice(0, 10) : "unknown";
+  return date.toLocaleString(undefined, { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 function badge(value) {
@@ -49,18 +77,15 @@ function sourceRows() {
   if (state.queryTab) {
     return (state.payload.latest_top10 || []).filter((item) => item.query === state.queryTab);
   }
-  if (state.view === "all") return state.payload.mentions || [];
+  if (state.view === "all") return state.payload.latest_top10 || [];
   return (state.payload.views && state.payload.views[state.view]) || [];
 }
 
 function filteredRows() {
   return sourceRows().filter((item) => {
-    const date = formatShortDate(item.run_datetime || item.last_seen);
     return (!state.filters.query || item.query === state.filters.query)
-      && (!state.filters.date || date === state.filters.date)
       && (!state.filters.status || item.status === state.filters.status)
       && (!state.filters.sentiment || item.sentiment === state.filters.sentiment)
-      && (!state.filters.risk || item.risk_level === state.filters.risk)
       && (!state.filters.domain || item.domain === state.filters.domain);
   });
 }
@@ -99,29 +124,41 @@ function renderSummary(summary) {
 
 function renderTable() {
   const rows = sortedRows(filteredRows());
-  if (!rows.length) {
+  const totalPages = Math.max(1, Math.ceil(rows.length / state.pageSize));
+  state.page = Math.min(state.page, totalPages);
+  const start = (state.page - 1) * state.pageSize;
+  const pageRows = rows.slice(start, start + state.pageSize);
+  if (!pageRows.length) {
     body.innerHTML = '<tr><td colspan="15" class="empty">No rows match this view</td></tr>';
-    return;
+  } else {
+    body.innerHTML = pageRows.map((item) => `
+      <tr>
+        <td class="query-cell">${escapeHtml(item.query)}</td>
+        <td>${escapeHtml(item.current_rank || "-")}</td>
+        <td>${escapeHtml(item.previous_rank || "-")}</td>
+        <td>${item.rank_delta === null || item.rank_delta === undefined ? "-" : escapeHtml(item.rank_delta)}</td>
+        <td>${badge(item.status)}</td>
+        <td class="title-cell">${escapeHtml(item.title)}</td>
+        <td class="url-cell"><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.url)}</a></td>
+        <td>${escapeHtml(item.domain)}</td>
+        <td>${badge(item.sentiment || "neutral")}</td>
+        <td>${badge(item.risk_level || "none")}</td>
+        <td>${escapeHtml(item.risk_keywords || "-")}</td>
+        <td>${formatDate(item.first_seen)}</td>
+        <td>${formatDate(item.last_seen)}</td>
+        <td>${item.date_published ? escapeHtml(item.date_published) : "unknown"}</td>
+        <td>${badge(item.source_type || "organic")}</td>
+      </tr>
+    `).join("");
   }
-  body.innerHTML = rows.map((item) => `
-    <tr>
-      <td class="query-cell">${escapeHtml(item.query)}</td>
-      <td>${escapeHtml(item.current_rank || "-")}</td>
-      <td>${escapeHtml(item.previous_rank || "-")}</td>
-      <td>${item.rank_delta === null || item.rank_delta === undefined ? "-" : escapeHtml(item.rank_delta)}</td>
-      <td>${badge(item.status)}</td>
-      <td class="title-cell">${escapeHtml(item.title)}</td>
-      <td class="url-cell"><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.url)}</a></td>
-      <td>${escapeHtml(item.domain)}</td>
-      <td>${badge(item.sentiment || "neutral")}</td>
-      <td>${badge(item.risk_level || "none")}</td>
-      <td>${escapeHtml(item.risk_keywords || "-")}</td>
-      <td>${formatDate(item.first_seen)}</td>
-      <td>${formatDate(item.last_seen)}</td>
-      <td>${item.date_published ? escapeHtml(item.date_published) : "unknown"}</td>
-      <td>${badge(item.source_type || "organic")}</td>
-    </tr>
-  `).join("");
+  document.querySelector("#pageInfo").textContent = `Page ${state.page} of ${totalPages} - ${rows.length} rows`;
+  document.querySelector("#prevPage").disabled = state.page <= 1;
+  document.querySelector("#nextPage").disabled = state.page >= totalPages;
+}
+
+function resetAndRender() {
+  state.page = 1;
+  renderTable();
 }
 
 function renderQueryTabs(queries) {
@@ -135,7 +172,7 @@ function renderQueryTabs(queries) {
       state.queryTab = button.dataset.query;
       state.view = "all";
       document.querySelectorAll(".view").forEach((item) => item.classList.toggle("active", item.dataset.view === "all"));
-      renderTable();
+      resetAndRender();
     });
   });
 }
@@ -147,8 +184,7 @@ function populateFilters(rows) {
 
 function fillSelect(selector, values, label) {
   const select = document.querySelector(selector);
-  select.innerHTML = `<option value="">${label}</option>`
-    + values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
+  select.innerHTML = `<option value="">${label}</option>` + values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
 }
 
 function renderDomains() {
@@ -196,13 +232,13 @@ function bindEvents() {
       document.querySelectorAll(".query-tab").forEach((item) => item.classList.remove("active"));
       state.view = button.dataset.view;
       state.queryTab = "";
-      renderTable();
+      resetAndRender();
     });
   });
-  ["query", "date", "status", "sentiment", "risk", "domain"].forEach((key) => {
+  ["query", "status", "sentiment", "domain"].forEach((key) => {
     document.querySelector(`#${key}Filter`).addEventListener("change", (event) => {
       state.filters[key] = event.target.value;
-      renderTable();
+      resetAndRender();
     });
   });
   document.querySelectorAll("[data-sort]").forEach((button) => {
@@ -213,8 +249,16 @@ function bindEvents() {
         state.sortKey = key;
         state.sortDirection = key === "current_rank" || key === "sentiment" || key === "risk_level" ? "asc" : "desc";
       }
-      renderTable();
+      resetAndRender();
     });
+  });
+  document.querySelector("#prevPage").addEventListener("click", () => {
+    state.page = Math.max(1, state.page - 1);
+    renderTable();
+  });
+  document.querySelector("#nextPage").addEventListener("click", () => {
+    state.page += 1;
+    renderTable();
   });
 }
 
@@ -226,7 +270,7 @@ async function loadDashboard() {
     document.querySelector("#projectName").textContent = state.payload.project || "SERP Snapshot Dashboard";
     document.querySelector("#generatedAt").textContent = formatDate(state.payload.generated_at);
     renderSummary(state.payload.summary || {});
-    populateFilters(state.payload.mentions || []);
+    populateFilters(state.payload.mentions || state.payload.latest_top10 || []);
     renderQueryTabs(state.payload.queries || []);
     renderTable();
     renderDomains();
@@ -236,5 +280,4 @@ async function loadDashboard() {
   }
 }
 
-bindEvents();
-loadDashboard();
+bindAuth();
