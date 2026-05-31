@@ -12,6 +12,8 @@ import httpx
 from app.database import MentionChange
 
 LOGGER = logging.getLogger(__name__)
+MAX_TELEGRAM_TEXT_LENGTH = 4096
+TELEGRAM_TEXT_CHUNK_SIZE = 3900
 
 
 class TelegramReporter:
@@ -66,7 +68,8 @@ class TelegramReporter:
             return
 
         with httpx.Client(timeout=30) as client:
-            client.post(f"{self.base_url}/sendMessage", data={"chat_id": self.chat_id, "text": text}).raise_for_status()
+            if not self._send_text(client, text):
+                return
             if self.config.get("send_screenshots", True):
                 sent_paths: set[str] = set()
                 for change in notable:
@@ -79,6 +82,42 @@ class TelegramReporter:
                                 data={"chat_id": self.chat_id, "caption": f"SERP: {change.mention.query}"[:1000]},
                                 files={"photo": image},
                             ).raise_for_status()
+
+    def _send_text(self, client: httpx.Client, text: str) -> bool:
+        for chunk in self._split_text(text):
+            try:
+                client.post(f"{self.base_url}/sendMessage", data={"chat_id": self.chat_id, "text": chunk}).raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                response_text = exc.response.text[:500] if exc.response is not None else ""
+                LOGGER.error("Telegram message delivery failed: %s %s", exc, response_text)
+                return False
+            except httpx.HTTPError as exc:
+                LOGGER.error("Telegram message delivery failed: %s", exc)
+                return False
+        return True
+
+    @staticmethod
+    def _split_text(text: str) -> list[str]:
+        if len(text) <= MAX_TELEGRAM_TEXT_LENGTH:
+            return [text]
+
+        chunks: list[str] = []
+        current: list[str] = []
+        current_length = 0
+        for line in text.splitlines():
+            if len(line) > TELEGRAM_TEXT_CHUNK_SIZE:
+                line = f"{line[: TELEGRAM_TEXT_CHUNK_SIZE - 15]}... [truncated]"
+            line_length = len(line) + 1
+            if current and current_length + line_length > TELEGRAM_TEXT_CHUNK_SIZE:
+                chunks.append("\n".join(current))
+                current = []
+                current_length = 0
+            current.append(line)
+            current_length += line_length
+
+        if current:
+            chunks.append("\n".join(current))
+        return chunks
 
     def _format_message(
         self,
