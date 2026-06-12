@@ -14,7 +14,7 @@ from app.entity_map import EntityMapBuilder
 from app.publication_date import PublicationDateExtractor
 from app.screenshots import ScreenshotService
 from app.sentiment import SentimentAnalyzer
-from app.serp_fetcher import SerperSerpFetcher
+from app.serp_fetcher import SerperQuotaError, SerperSerpFetcher
 from app.telegram_report import TelegramReporter
 
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
@@ -46,7 +46,12 @@ def run(config_path: str) -> None:
         reporter = TelegramReporter(settings.telegram_bot_token, settings.telegram_chat_id, settings.raw)
         entity_map_builder = EntityMapBuilder(settings.entity_map_path)
 
-        mentions = fetcher.fetch_all()
+        try:
+            mentions = fetcher.fetch_all()
+        except SerperQuotaError as exc:
+            logging.error("Serper.dev live snapshot skipped: %s", exc)
+            logging.info("Preserving previous SQLite history and dashboard data because no live SERP data was collected")
+            return
         logging.info("Fetched %d organic SERP results", len(mentions))
         mentions = analyzer.analyze_many(mentions)
         mentions = publisher.enrich_many(mentions)
