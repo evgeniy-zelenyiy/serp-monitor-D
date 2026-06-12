@@ -113,7 +113,7 @@ class SerperSerpFetcher:
             try:
                 data = response.json()
             except ValueError as exc:
-                LOGGER.exception("Serper.dev returned invalid JSON for query=%s payload=%s", query)
+                LOGGER.exception("Serper.dev returned invalid JSON for query=%s payload=%s", query, payload)
                 raise SerperQueryError(str(exc)) from exc
 
         organic_items = data.get("organic") or []
