@@ -10,6 +10,7 @@ monitoring:
   language: "pt"
   location_name: "Brazil"
   device: "desktop"
+  run_frequency: "daily"
   depth: 10
   demo_results_per_query: 10
   only_alert_on_changes: true
@@ -18,29 +19,11 @@ monitoring:
   extract_publication_date: true
   publish_dashboard: true
   queries:
-    - "\"Dmytro Rukin\""
-    - "\"Dmitry Rukin\""
-    - "\"dmytro rukin\""
-    - "\"dmitry rukin\""
-    - "\"LaFinteca\""
-    - "\"lafinteca\""
-    - "\"Dmytro Rukin\" OR \"LaFinteca\""
-    - "\"Dmitry Rukin\" OR \"LaFinteca\""
-    - "\"dmytro rukin\" fintech"
-    - "\"dmitry rukin\" fintech"
-    - "\"LaFinteca\" fintech"
-    - "\"lafinteca\" fintech"
-    - "\"Dmytro Rukin\" pagamentos"
+    - "dmytro rukin"
+    - "Dmytro Rukin"
+    - "Dmitry Rukin"
     - "\"Dmytro Rukin\" fraude"
-    - "\"Dmytro Rukin\" investimento"
-    - "\"LaFinteca\" pagamentos"
-    - "\"LaFinteca\" banco"
-    - "\"LaFinteca\" fraude"
-    - "\"Rukin\" fintech"
-    - "\"Rukin\" Brazil"
-    - "site:linkedin.com/in \"Dmytro Rukin\""
-    - "site:medium.com \"Dmytro Rukin\""
-    - "site:crunchbase.com \"LaFinteca\""
+    - "LaFinteca"
 
 sentiment:
   use_openai: true
@@ -67,6 +50,14 @@ sentiment:
     - "ilegal"
     - "denúncia financeira"
     - "reclame aqui"
+    - "fraud"
+    - "defamatory"
+    - "allegation"
+    - "fake"
+    - "незаконний"
+    - "шахрайство"
+    - "наклеп"
+    - "наклепні"
 
 screenshots:
   enabled: true
@@ -87,11 +78,35 @@ domain_tags:
 
 telegram:
   enabled: true
+  mode: "digest"
+  digest_only: true
   alert_on_sentiments:
     - "negative"
     - "risky"
   max_message_mentions: 20
-  send_screenshots: true
+  send_screenshots: false
+  send_full_serp: false
+  only_alert_on_changes: true
+  skip_empty_digest: true
+  dashboard_url: "https://evgeniy-zelenyiy.github.io/serp-monitor-D/"
+  risk_keywords:
+    - "fraud"
+    - "scam"
+    - "fraude"
+    - "golpe"
+    - "acusação"
+    - "investigação"
+    - "crime"
+    - "processo"
+    - "reclamação"
+    - "pirâmide"
+    - "defamatory"
+    - "allegation"
+    - "fake"
+    - "незаконний"
+    - "шахрайство"
+    - "наклеп"
+    - "наклепні"
 
 entity_map:
   enabled: true
