@@ -35,6 +35,14 @@ DEFAULT_NEGATIVE_KEYWORDS_PT = [
     "ilegal",
     "denúncia financeira",
     "reclame aqui",
+    "fraud",
+    "defamatory",
+    "allegation",
+    "fake",
+    "незаконний",
+    "шахрайство",
+    "наклеп",
+    "наклепні",
 ]
 
 DEFAULT_CONFIG: dict[str, Any] = {
@@ -50,6 +58,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "language": "pt",
         "location_name": "Brazil",
         "device": "desktop",
+        "run_frequency": "daily",
         "depth": 10,
         "demo_results_per_query": 10,
         "only_alert_on_changes": True,
@@ -76,9 +85,15 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "telegram": {
         "enabled": True,
+        "mode": "digest",
+        "digest_only": True,
         "alert_on_sentiments": ["negative", "risky"],
         "max_message_mentions": 20,
-        "send_screenshots": True,
+        "send_screenshots": False,
+        "send_full_serp": False,
+        "only_alert_on_changes": True,
+        "skip_empty_digest": True,
+        "dashboard_url": "https://evgeniy-zelenyiy.github.io/serp-monitor-D/",
     },
     "entity_map": {
         "enabled": True,
