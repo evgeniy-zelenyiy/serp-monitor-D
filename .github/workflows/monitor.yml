@@ -6,6 +6,10 @@ on:
     # Daily at 08:00 UTC.
     - cron: "0 8 * * *"
 
+concurrency:
+  group: serp-monitor-main
+  cancel-in-progress: false
+
 jobs:
   monitor:
     runs-on: ubuntu-latest
@@ -43,6 +47,10 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python -m app.main --config config.yaml
 
+      - name: Sync latest dashboard baseline
+        if: always()
+        run: git pull --rebase origin main
+
       - name: Export dashboard data
         if: always()
         run: python scripts/export_dashboard_data.py --config config.yaml --docs-dir docs
@@ -55,7 +63,6 @@ jobs:
           mkdir -p docs/data docs/screenshots
           git add docs/data/results.json docs/screenshots docs/index.html docs/styles.css docs/app.js
           git diff --cached --quiet || git commit -m "Update dashboard data"
-          git pull --rebase origin main
           git push origin HEAD:main
 
       - name: Upload monitor artifacts
