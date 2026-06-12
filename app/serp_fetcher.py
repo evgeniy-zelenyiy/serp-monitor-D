@@ -16,6 +16,19 @@ LOGGER = logging.getLogger(__name__)
 class SerperQueryError(RuntimeError):
     """Raised when one Serper query fails but the run can continue."""
 
+    def __init__(self, message: str, *, status_code: int | None = None, response_body: str = "") -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.response_body = response_body
+
+    @property
+    def is_quota_error(self) -> bool:
+        return self.status_code == 400 and "not enough credits" in self.response_body.lower()
+
+
+class SerperQuotaError(RuntimeError):
+    """Raised when Serper has no credits and no live snapshot can be collected."""
+
 
 class SerperSerpFetcher:
     """Fetch organic Google results from Serper.dev or generate demo mentions."""
@@ -38,10 +51,16 @@ class SerperSerpFetcher:
         mentions: list[Mention] = []
         successful_queries: list[str] = []
         failed_queries: list[str] = []
+        quota_failed_queries: list[str] = []
         for query in queries:
             try:
                 mentions.extend(self.fetch_query(query))
                 successful_queries.append(str(query))
+            except SerperQueryError as exc:
+                LOGGER.error("Serper.dev query failed for query=%s: %s", query, exc)
+                failed_queries.append(str(query))
+                if exc.is_quota_error:
+                    quota_failed_queries.append(str(query))
             except Exception as exc:  # noqa: BLE001 - continue monitoring remaining queries.
                 LOGGER.error("Serper.dev query failed for query=%s: %s", query, exc)
                 failed_queries.append(str(query))
@@ -52,6 +71,8 @@ class SerperSerpFetcher:
             failed_queries,
         )
         if queries and failed_queries and not successful_queries:
+            if len(quota_failed_queries) == len(failed_queries):
+                raise SerperQuotaError("All Serper.dev queries failed because the account has no remaining credits")
             raise RuntimeError(f"All Serper.dev queries failed: {failed_queries}")
         return mentions
 
@@ -83,12 +104,16 @@ class SerperSerpFetcher:
                 try:
                     response.raise_for_status()
                 except httpx.HTTPStatusError as exc:
-                    raise SerperQueryError(str(exc)) from exc
+                    raise SerperQueryError(
+                        str(exc),
+                        status_code=response.status_code,
+                        response_body=response.text,
+                    ) from exc
 
             try:
                 data = response.json()
             except ValueError as exc:
-                LOGGER.exception("Serper.dev returned invalid JSON for query=%s payload=%s", query, payload)
+                LOGGER.exception("Serper.dev returned invalid JSON for query=%s payload=%s", query)
                 raise SerperQueryError(str(exc)) from exc
 
         organic_items = data.get("organic") or []
