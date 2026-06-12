@@ -13,6 +13,10 @@ from app.database import Mention
 LOGGER = logging.getLogger(__name__)
 
 
+class SerperQueryError(RuntimeError):
+    """Raised when one Serper query fails but the run can continue."""
+
+
 class SerperSerpFetcher:
     """Fetch organic Google results from Serper.dev or generate demo mentions."""
 
@@ -32,8 +36,23 @@ class SerperSerpFetcher:
 
         LOGGER.info("Live mode with Serper.dev: fetching %d configured queries", len(queries))
         mentions: list[Mention] = []
+        successful_queries: list[str] = []
+        failed_queries: list[str] = []
         for query in queries:
-            mentions.extend(self.fetch_query(query))
+            try:
+                mentions.extend(self.fetch_query(query))
+                successful_queries.append(str(query))
+            except Exception as exc:  # noqa: BLE001 - continue monitoring remaining queries.
+                LOGGER.error("Serper.dev query failed for query=%s: %s", query, exc)
+                failed_queries.append(str(query))
+        LOGGER.info(
+            "Serper.dev query summary: successful=%d failed=%d failed_queries=%s",
+            len(successful_queries),
+            len(failed_queries),
+            failed_queries,
+        )
+        if queries and failed_queries and not successful_queries:
+            raise RuntimeError(f"All Serper.dev queries failed: {failed_queries}")
         return mentions
 
     def fetch_query(self, query: str) -> list[Mention]:
@@ -50,9 +69,27 @@ class SerperSerpFetcher:
 
         LOGGER.info("Fetching Serper.dev top-%d organic results for query=%s", depth, query)
         with httpx.Client(timeout=60) as client:
-            response = client.post(self.BASE_URL, headers=headers, json=payload)
-            response.raise_for_status()
-            data = response.json()
+            try:
+                response = client.post(self.BASE_URL, headers=headers, json=payload)
+            except httpx.HTTPError as exc:
+                LOGGER.exception("Serper.dev request error for query=%s payload=%s", query, payload)
+                raise SerperQueryError(str(exc)) from exc
+
+            if response.status_code >= 400:
+                LOGGER.error("Serper.dev non-200 response for query=%s", query)
+                LOGGER.error("Serper.dev status_code=%s", response.status_code)
+                LOGGER.error("Serper.dev response_body=%s", response.text)
+                LOGGER.error("Serper.dev request_payload=%s", payload)
+                try:
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as exc:
+                    raise SerperQueryError(str(exc)) from exc
+
+            try:
+                data = response.json()
+            except ValueError as exc:
+                LOGGER.exception("Serper.dev returned invalid JSON for query=%s payload=%s", query, payload)
+                raise SerperQueryError(str(exc)) from exc
 
         organic_items = data.get("organic") or []
         return [self._to_mention(query, item, rank) for rank, item in enumerate(organic_items[:depth], start=1)]
