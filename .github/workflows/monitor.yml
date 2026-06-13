@@ -77,3 +77,7 @@ jobs:
             docs/data/results.json
             docs/screenshots/**/*.png
           if-no-files-found: ignore
+          permissions:
+  contents: write
+  pages: write
+  id-token: write
