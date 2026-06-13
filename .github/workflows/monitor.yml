@@ -1,3 +1,6 @@
+Ось повний `.github/workflows/monitor.yml` для заміни:
+
+```yaml
 name: SERP Monitor
 
 on:
@@ -10,13 +13,14 @@ concurrency:
   group: serp-monitor-main
   cancel-in-progress: false
 
-jobs:
-  monitor:
-    runs-on: ubuntu-latest
-   permissions:
+permissions:
   contents: write
   pages: write
   id-token: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -94,4 +98,4 @@ jobs:
             docs/data/results.json
             docs/screenshots/**/*.png
           if-no-files-found: ignore
-          
+```
