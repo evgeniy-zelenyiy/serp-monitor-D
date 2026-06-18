@@ -1,0 +1,21 @@
+metric,value
+reporting_period,Pending first automated refresh
+total_monitored_queries,5
+total_pr_style_results,N/A
+total_top10_slots,N/A
+pr_visibility_share_percent,N/A
+query_coverage_count,N/A
+query_coverage_percent,N/A
+average_pr_rank,N/A
+best_pr_rank,N/A
+worst_pr_rank,N/A
+pr_rank_improvements,N/A
+pr_rank_drops,N/A
+newly_visible_pr_results,N/A
+pr_results_disappeared,N/A
+risky_top10_results,N/A
+overall_visibility_status,stable
+recommended_action_1,Complete the next automated refresh to populate current NDA-safe metrics.
+recommended_action_2,Strengthen PR URLs that are already visible.
+recommended_action_3,Support weak PR URLs with relevant links.
+recommended_action_4,Monitor queries where risk visibility increased.
