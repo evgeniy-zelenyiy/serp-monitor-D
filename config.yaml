@@ -112,6 +112,16 @@ entity_map:
   enabled: true
 
 reporting:
+  pr_assets:
+    enabled: true
+    queries:
+      - "dmytro rukin"
+      - "Dmytro Rukin"
+      - "Dmitry Rukin"
+    urls:
+      - "https://www.europeanbusinessreview.com/dmytro-rukin-how-fintech-companies-enter-the-latam-market-and-stay-there/"
+      - "https://financialtechtimes.com/what-founders-and-cfos-need-to-know-before-entering-latam/"
+      - "https://techbullion.com/dmytro-rukin-lafinteca-why-who-you-partner-with-in-the-latam-fintech-market-matters-as-much-as-how-you-enter/"
   pr_visibility:
     enabled: true
     nda_safe: true
