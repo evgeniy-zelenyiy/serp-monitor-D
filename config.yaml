@@ -110,3 +110,25 @@ telegram:
 
 entity_map:
   enabled: true
+
+reporting:
+  pr_visibility:
+    enabled: true
+    nda_safe: true
+    anonymize_domains: true
+    include_full_urls: false
+    include_screenshots: false
+    include_titles: false
+    public_safe_domains:
+      - linkedin.com
+      - la-finteca.com
+      - lafinteca.com
+    pr_domain_keywords:
+      - pr
+      - news
+      - business
+      - finance
+      - fintech
+      - press
+      - review
+      - interview
