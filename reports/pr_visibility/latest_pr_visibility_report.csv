@@ -1,17 +1,17 @@
 metric,value
-reporting_period,2026-06-12 to 2026-06-24
+reporting_period,2026-06-12 to 2026-06-25
 total_monitored_queries,5
-total_pr_style_results,21
+total_pr_style_results,22
 total_top10_slots,47
-pr_visibility_share_percent,44.7
+pr_visibility_share_percent,46.8
 query_coverage_count,5
 query_coverage_percent,100.0
-average_pr_rank,5.29
+average_pr_rank,5.36
 best_pr_rank,1
 worst_pr_rank,10
-pr_rank_improvements,35
-pr_rank_drops,36
-newly_visible_pr_results,24
+pr_rank_improvements,39
+pr_rank_drops,39
+newly_visible_pr_results,13
 pr_results_disappeared,34
 risky_top10_results,6
 overall_visibility_status,declining
