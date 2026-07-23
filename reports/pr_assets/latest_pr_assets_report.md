@@ -1,13 +1,13 @@
 # PR Asset Tracking Report
 
-**Generated:** 2026-07-22T10:28:34.365859+00:00
+**Generated:** 2026-07-23T10:26:30.110992+00:00
 **Tracked assets:** 3
 **Tracked queries:** 3
 
 | Asset | URL | Query | Current rank | Previous rank | Rank delta | Best rank | First seen | Last seen | Top 3 | Top 10 |
 | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | --- |
-| PR Asset 1 | https://www.europeanbusinessreview.com/dmytro-rukin-how-fintech-companies-enter-the-latam-market-and-stay-there/ | dmytro rukin | N/A | 10 | N/A | 3 | 2026-06-12T16:55:46.366349+00:00 | 2026-07-17T09:58:12.636238+00:00 | no | no |
-| PR Asset 1 | https://www.europeanbusinessreview.com/dmytro-rukin-how-fintech-companies-enter-the-latam-market-and-stay-there/ | Dmytro Rukin | 10 | 10 | 0 | 3 | 2026-06-12T16:55:46.366349+00:00 | 2026-07-22T10:26:01.797825+00:00 | no | yes |
+| PR Asset 1 | https://www.europeanbusinessreview.com/dmytro-rukin-how-fintech-companies-enter-the-latam-market-and-stay-there/ | dmytro rukin | 10 | 10 | 0 | 3 | 2026-06-12T16:55:46.366349+00:00 | 2026-07-23T10:23:32.087176+00:00 | no | yes |
+| PR Asset 1 | https://www.europeanbusinessreview.com/dmytro-rukin-how-fintech-companies-enter-the-latam-market-and-stay-there/ | Dmytro Rukin | 9 | 10 | 1 | 3 | 2026-06-12T16:55:46.366349+00:00 | 2026-07-23T10:23:32.087176+00:00 | no | yes |
 | PR Asset 1 | https://www.europeanbusinessreview.com/dmytro-rukin-how-fintech-companies-enter-the-latam-market-and-stay-there/ | Dmitry Rukin | N/A | N/A | N/A | N/A | N/A | N/A | no | no |
 | PR Asset 2 | https://financialtechtimes.com/what-founders-and-cfos-need-to-know-before-entering-latam/ | dmytro rukin | N/A | N/A | N/A | N/A | N/A | N/A | no | no |
 | PR Asset 2 | https://financialtechtimes.com/what-founders-and-cfos-need-to-know-before-entering-latam/ | Dmytro Rukin | N/A | N/A | N/A | N/A | N/A | N/A | no | no |
