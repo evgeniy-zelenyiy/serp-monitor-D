@@ -1,0 +1,19 @@
+metric,value
+reporting_period,2026-08-16 to 2026-08-28
+total_monitored_queries,5
+total_pr_style_results,18
+total_top10_slots,47
+pr_visibility_share_percent,38.3
+query_coverage_count,5
+query_coverage_percent,100.0
+average_pr_rank,4.89
+best_pr_rank,1
+worst_pr_rank,10
+pr_rank_improvements,41
+pr_rank_drops,46
+newly_visible_pr_results,3
+pr_results_disappeared,31
+risky_top10_results,7
+overall_visibility_status,declining
+recommended_action_1,Strengthen PR URLs that are already visible.
+recommended_action_2,Monitor queries where risk visibility increased.
