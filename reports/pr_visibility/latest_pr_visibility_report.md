@@ -1,7 +1,7 @@
 # NDA-safe PR Visibility Report
 
 **Project:** Dmytro Rukin / LaFinteca SERM
-**Reporting period:** 2026-09-04 to 2026-09-16
+**Reporting period:** 2026-09-05 to 2026-09-17
 **Privacy mode:** NDA-safe
 **Overall visibility status:** **declining**
 
@@ -18,13 +18,13 @@ This report summarizes the visibility of PR-style results in monitored Google to
 | Total observed top-10 slots | 49 |
 | PR visibility share | 38.8% |
 | Query coverage | 5 queries (100.0%) |
-| Average PR rank | 5.05 |
+| Average PR rank | 4.84 |
 | Best PR rank | 1 |
 | Worst PR rank | 9 |
-| PR rank improvements | 32 |
-| PR rank drops | 39 |
+| PR rank improvements | 33 |
+| PR rank drops | 38 |
 | Newly visible PR results | 7 |
-| PR results disappeared from top-10 | 39 |
+| PR results disappeared from top-10 | 35 |
 | Risky or negative results visible in top-10 | 4 |
 
 ## Anonymized PR Visibility Summary
@@ -32,20 +32,20 @@ This report summarizes the visibility of PR-style results in monitored Google to
 - **PR Article 1** - PR Domain 1; rank #5; stable.
 - **PR Article 2** - PR Domain 2; rank #7; stable.
 - **PR Article 3** - PR Domain 3; rank #8; stable.
-- **PR Article 4** - PR Domain 4; rank #3; dropped.
-- **PR Article 5** - PR Domain 5; rank #4; stable.
-- **PR Article 6** - PR Domain 6; rank #7; dropped.
-- **PR Article 7** - PR Domain 7; rank #9; stable.
+- **PR Article 4** - PR Domain 4; rank #3; stable.
+- **PR Article 5** - PR Domain 5; rank #4; improved.
+- **PR Article 6** - PR Domain 6; rank #5; dropped.
+- **PR Article 7** - PR Domain 7; rank #7; improved.
 - **PR Article 8** - PR Domain 4; rank #1; stable.
-- **PR Article 9** - PR Domain 5; rank #3; stable.
+- **PR Article 9** - PR Domain 6; rank #3; stable.
 - **PR Article 10** - PR Domain 7; rank #4; stable.
 - **PR Article 11** - PR Domain 8; rank #6; stable.
 - **PR Article 12** - la-finteca.com; rank #1; stable.
-- **PR Article 13** - PR Domain 1; rank #7; stable.
-- **PR Article 14** - PR Domain 7; rank #8; stable.
-- **PR Article 15** - la-finteca.com; rank #9; stable.
+- **PR Article 13** - la-finteca.com; rank #7; stable.
+- **PR Article 14** - PR Domain 1; rank #8; dropped.
+- **PR Article 15** - PR Domain 7; rank #9; dropped.
 - **PR Article 16** - PR Domain 4; rank #1; stable.
-- **PR Article 17** - PR Domain 5; rank #3; stable.
+- **PR Article 17** - PR Domain 6; rank #3; stable.
 - **PR Article 18** - PR Domain 7; rank #4; stable.
 - **PR Article 19** - PR Domain 8; rank #6; stable.
 
@@ -59,8 +59,7 @@ This report summarizes the visibility of PR-style results in monitored Google to
 ## Recommended Next Actions
 
 1. Strengthen PR URLs that are already visible.
-2. Support weak PR URLs with relevant links.
-3. Monitor queries where risk visibility increased.
+2. Monitor queries where risk visibility increased.
 
 ## NDA-safe Disclosure
 
