@@ -1,18 +1,18 @@
 metric,value
-reporting_period,2026-09-05 to 2026-09-17
+reporting_period,2026-09-06 to 2026-09-18
 total_monitored_queries,5
-total_pr_style_results,19
-total_top10_slots,49
-pr_visibility_share_percent,38.8
+total_pr_style_results,16
+total_top10_slots,46
+pr_visibility_share_percent,34.8
 query_coverage_count,5
 query_coverage_percent,100.0
-average_pr_rank,4.84
+average_pr_rank,4.88
 best_pr_rank,1
-worst_pr_rank,9
-pr_rank_improvements,33
-pr_rank_drops,38
-newly_visible_pr_results,7
-pr_results_disappeared,35
+worst_pr_rank,10
+pr_rank_improvements,32
+pr_rank_drops,36
+newly_visible_pr_results,5
+pr_results_disappeared,36
 risky_top10_results,4
 overall_visibility_status,declining
 recommended_action_1,Strengthen PR URLs that are already visible.
