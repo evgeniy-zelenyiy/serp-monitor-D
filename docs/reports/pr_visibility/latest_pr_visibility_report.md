@@ -1,7 +1,7 @@
 # NDA-safe PR Visibility Report
 
 **Project:** Dmytro Rukin / LaFinteca SERM
-**Reporting period:** 2026-09-14 to 2026-09-25
+**Reporting period:** 2026-09-15 to 2026-09-26
 **Privacy mode:** NDA-safe
 **Overall visibility status:** **declining**
 
@@ -14,45 +14,46 @@ This report summarizes the visibility of PR-style results in monitored Google to
 | Metric | Value |
 | --- | ---: |
 | Total monitored queries | 5 |
-| Total PR-style results found | 17 |
+| Total PR-style results found | 18 |
 | Total observed top-10 slots | 47 |
-| PR visibility share | 36.2% |
+| PR visibility share | 38.3% |
 | Query coverage | 5 queries (100.0%) |
-| Average PR rank | 5 |
+| Average PR rank | 4.83 |
 | Best PR rank | 1 |
 | Worst PR rank | 10 |
-| PR rank improvements | 26 |
-| PR rank drops | 31 |
-| Newly visible PR results | 6 |
-| PR results disappeared from top-10 | 34 |
+| PR rank improvements | 27 |
+| PR rank drops | 32 |
+| Newly visible PR results | 7 |
+| PR results disappeared from top-10 | 31 |
 | Risky or negative results visible in top-10 | 5 |
 
 ## Anonymized PR Visibility Summary
 
 - **PR Article 1** - PR Domain 1; rank #6; stable.
 - **PR Article 2** - PR Domain 2; rank #7; stable.
-- **PR Article 3** - PR Domain 3; rank #2; improved.
-- **PR Article 4** - PR Domain 4; rank #3; dropped.
-- **PR Article 5** - PR Domain 5; rank #6; dropped.
-- **PR Article 6** - PR Domain 6; rank #7; improved.
-- **PR Article 7** - PR Domain 7; rank #9; improved.
-- **PR Article 8** - PR Domain 8; rank #10; dropped.
-- **PR Article 9** - PR Domain 3; rank #1; stable.
-- **PR Article 10** - PR Domain 9; rank #3; stable.
-- **PR Article 11** - PR Domain 10; rank #5; dropped.
-- **PR Article 12** - PR Domain 11; rank #9; dropped.
+- **PR Article 3** - PR Domain 3; rank #2; stable.
+- **PR Article 4** - PR Domain 4; rank #3; stable.
+- **PR Article 5** - PR Domain 5; rank #6; stable.
+- **PR Article 6** - PR Domain 6; rank #8; dropped.
+- **PR Article 7** - PR Domain 7; rank #9; stable.
+- **PR Article 8** - PR Domain 3; rank #1; stable.
+- **PR Article 9** - PR Domain 8; rank #3; stable.
+- **PR Article 10** - PR Domain 9; rank #4; improved.
+- **PR Article 11** - PR Domain 10; rank #9; stable.
+- **PR Article 12** - PR Domain 11; rank #10; dropped.
 - **PR Article 13** - la-finteca.com; rank #1; stable.
-- **PR Article 14** - PR Domain 1; rank #7; improved.
-- **PR Article 15** - PR Domain 3; rank #1; stable.
-- **PR Article 16** - PR Domain 9; rank #3; stable.
-- **PR Article 17** - PR Domain 10; rank #5; stable.
+- **PR Article 14** - linkedin.com; rank #2; stable.
+- **PR Article 15** - PR Domain 1; rank #7; stable.
+- **PR Article 16** - PR Domain 3; rank #1; stable.
+- **PR Article 17** - PR Domain 8; rank #3; stable.
+- **PR Article 18** - PR Domain 9; rank #5; stable.
 
 ## Anonymized Risk Context
 
 - **Risk Domain 1** - rank #2; stable.
 - **Risk Domain 2** - rank #7; stable.
 - **Risk Domain 3** - rank #8; stable.
-- **Risk Domain 4** - rank #10; dropped.
+- **Risk Domain 4** - rank #10; stable.
 - **Risk Domain 5** - rank #5; stable.
 
 ## Recommended Next Actions
