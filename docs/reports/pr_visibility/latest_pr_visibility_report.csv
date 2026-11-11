@@ -1,19 +1,19 @@
 metric,value
-reporting_period,2026-11-01 to 2026-11-10
+reporting_period,2026-11-11
 total_monitored_queries,5
-total_pr_style_results,19
-total_top10_slots,43
-pr_visibility_share_percent,44.2
-query_coverage_count,5
-query_coverage_percent,100.0
-average_pr_rank,4
-best_pr_rank,1
-worst_pr_rank,9
-pr_rank_improvements,36
-pr_rank_drops,33
-newly_visible_pr_results,5
-pr_results_disappeared,33
-risky_top10_results,2
-overall_visibility_status,declining
+total_pr_style_results,0
+total_top10_slots,0
+pr_visibility_share_percent,0.0
+query_coverage_count,0
+query_coverage_percent,0.0
+average_pr_rank,N/A
+best_pr_rank,N/A
+worst_pr_rank,N/A
+pr_rank_improvements,0
+pr_rank_drops,0
+newly_visible_pr_results,0
+pr_results_disappeared,0
+risky_top10_results,0
+overall_visibility_status,stable
 recommended_action_1,Strengthen PR URLs that are already visible.
-recommended_action_2,Monitor queries where risk visibility increased.
+recommended_action_2,Create additional neutral or positive assets because PR visibility share is low.

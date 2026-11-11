@@ -1,9 +1,9 @@
 # NDA-safe PR Visibility Report
 
 **Project:** Dmytro Rukin / LaFinteca SERM
-**Reporting period:** 2026-11-01 to 2026-11-10
+**Reporting period:** 2026-11-11
 **Privacy mode:** NDA-safe
-**Overall visibility status:** **declining**
+**Overall visibility status:** **stable**
 
 ## Executive Summary
 
@@ -14,50 +14,31 @@ This report summarizes the visibility of PR-style results in monitored Google to
 | Metric | Value |
 | --- | ---: |
 | Total monitored queries | 5 |
-| Total PR-style results found | 19 |
-| Total observed top-10 slots | 43 |
-| PR visibility share | 44.2% |
-| Query coverage | 5 queries (100.0%) |
-| Average PR rank | 4 |
-| Best PR rank | 1 |
-| Worst PR rank | 9 |
-| PR rank improvements | 36 |
-| PR rank drops | 33 |
-| Newly visible PR results | 5 |
-| PR results disappeared from top-10 | 33 |
-| Risky or negative results visible in top-10 | 2 |
+| Total PR-style results found | 0 |
+| Total observed top-10 slots | 0 |
+| PR visibility share | 0.0% |
+| Query coverage | 0 queries (0.0%) |
+| Average PR rank | N/A |
+| Best PR rank | N/A |
+| Worst PR rank | N/A |
+| PR rank improvements | 0 |
+| PR rank drops | 0 |
+| Newly visible PR results | 0 |
+| PR results disappeared from top-10 | 0 |
+| Risky or negative results visible in top-10 | 0 |
 
 ## Anonymized PR Visibility Summary
 
-- **PR Article 1** - PR Domain 1; rank #5; stable.
-- **PR Article 2** - PR Domain 2; rank #6; improved.
-- **PR Article 3** - PR Domain 3; rank #3; dropped.
-- **PR Article 4** - PR Domain 4; rank #4; stable.
-- **PR Article 5** - PR Domain 5; rank #5; dropped.
-- **PR Article 6** - PR Domain 6; rank #7; stable.
-- **PR Article 7** - PR Domain 7; rank #9; stable.
-- **PR Article 8** - PR Domain 3; rank #1; stable.
-- **PR Article 9** - PR Domain 8; rank #2; stable.
-- **PR Article 10** - PR Domain 5; rank #3; stable.
-- **PR Article 11** - PR Domain 4; rank #4; stable.
-- **PR Article 12** - PR Domain 7; rank #6; stable.
-- **PR Article 13** - la-finteca.com; rank #1; stable.
-- **PR Article 14** - PR Domain 1; rank #4; improved.
-- **PR Article 15** - PR Domain 3; rank #1; stable.
-- **PR Article 16** - PR Domain 8; rank #2; stable.
-- **PR Article 17** - PR Domain 5; rank #3; stable.
-- **PR Article 18** - PR Domain 4; rank #4; stable.
-- **PR Article 19** - PR Domain 7; rank #6; stable.
+- No PR-style result is currently visible.
 
 ## Anonymized Risk Context
 
-- **Risk Domain 1** - rank #6; improved.
-- **Risk Domain 2** - rank #7; improved.
+- No risky or negative result is currently visible.
 
 ## Recommended Next Actions
 
 1. Strengthen PR URLs that are already visible.
-2. Monitor queries where risk visibility increased.
+2. Create additional neutral or positive assets because PR visibility share is low.
 
 ## NDA-safe Disclosure
 
